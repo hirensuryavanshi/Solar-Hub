@@ -1,0 +1,6 @@
+{
+  "name": "SOLAR HUB",
+  "description": "Solar Manufacturing Knowledge Platform for employee information sharing, department resources, and calculation tools.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
