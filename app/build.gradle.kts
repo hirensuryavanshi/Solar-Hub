@@ -107,8 +107,8 @@ dependencies {
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
-    implementation(libs.androidx.compose.runtime.compose)
-    implementation(libs.androidx.compose.runtime.ktx)
+    implementation("androidx.compose.runtime:runtime:1.7.5")
+    implementation("androidx.compose.runtime:runtime-livedata:1.7.5")
 
     // Lifecycle
     implementation(libs.androidx.lifecycle.runtime.compose)
@@ -130,7 +130,7 @@ dependencies {
 
     // Kotlin and networking
     implementation(libs.kotlinx.coroutines.android)
-    implementation(libs.kotlinx.serialization.core)
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.7.3")
     implementation(libs.logging.interceptor)
     implementation(libs.moshi.kotlin)
     implementation(libs.okhttp)
@@ -146,7 +146,7 @@ dependencies {
 
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
-    androidTestImplementation(libs.androidx.test.espresso.core)
+    androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
     androidTestImplementation(libs.androidx.junit)
 
     debugImplementation(libs.androidx.compose.ui.test.manifest)
