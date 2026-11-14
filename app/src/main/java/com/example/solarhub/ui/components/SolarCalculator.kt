@@ -17,17 +17,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.WbSunny
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -43,59 +37,80 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.solarhub.model.SolarCalculatorMode
-import com.example.ui.theme.BorderLight
-import com.example.ui.theme.SolarBlue
 import com.example.ui.theme.SolarBlueDark
 import com.example.ui.theme.SolarBlueLight
-import com.example.ui.theme.SolarGold
-import com.example.ui.theme.SolarNavyDark
 import com.example.ui.theme.SurfaceCard
 import com.example.ui.theme.TextMuted
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
 import java.text.DecimalFormat
+import java.util.Locale
 
+/**
+ * One simple calculator:
+ *  - type Plant Capacity (MW) + Module Watt  -> Module Quantity appears
+ *  - type Module Quantity + Module Watt      -> Plant Capacity (MW) appears
+ */
 @Composable
 fun SolarCalculatorCard(
   modifier: Modifier = Modifier
 ) {
-  var mode by remember { mutableStateOf(SolarCalculatorMode.MW_TO_QUANTITY) }
   var mwInput by remember { mutableStateOf("10") }
-  var quantityInput by remember { mutableStateOf("") }
+  var quantityInput by remember { mutableStateOf("18182") }
   var wattInput by remember { mutableStateOf("550") }
+  var lastEditedMw by remember { mutableStateOf(true) }
 
-  val numberFormat = remember { DecimalFormat("#,##0.##") }
   val integerFormat = remember { DecimalFormat("#,###") }
+  val numberFormat = remember { DecimalFormat("#,##0.####") }
 
-  // Calculation computation
-  val calculatedResult: String = remember(mode, mwInput, quantityInput, wattInput) {
-    val watt = wattInput.toDoubleOrNull()
-    if (watt == null || watt <= 0.0) {
-      return@remember "Enter valid Module Watt (Wp)"
+  fun cleanNumber(text: String): String {
+    var dotSeen = false
+    val builder = StringBuilder()
+    for (ch in text) {
+      if (ch.isDigit()) {
+        builder.append(ch)
+      } else if (ch == '.' && !dotSeen) {
+        dotSeen = true
+        builder.append(ch)
+      }
     }
+    return builder.toString()
+  }
 
-    when (mode) {
-      SolarCalculatorMode.MW_TO_QUANTITY -> {
-        val mw = mwInput.toDoubleOrNull()
-        if (mw != null && mw > 0) {
-          // Module Quantity = (MW * 1,000,000) / Module Watt
-          val qty = (mw * 1_000_000.0) / watt
-          "${integerFormat.format(qty)} Modules"
-        } else {
-          "—"
-        }
+  fun formatMw(value: Double): String {
+    return String.format(Locale.US, "%.4f", value).trimEnd('0').trimEnd('.')
+  }
+
+  // Recalculate the "other" field
+  fun recalculate(fromMw: Boolean, watt: String) {
+    val w = watt.toDoubleOrNull()
+    if (fromMw) {
+      val mw = mwInput.toDoubleOrNull()
+      quantityInput = if (w != null && w > 0.0 && mw != null && mw > 0.0) {
+        Math.round(mw * 1_000_000.0 / w).toString()
+      } else {
+        ""
       }
-      SolarCalculatorMode.QUANTITY_TO_MW -> {
-        val qty = quantityInput.toDoubleOrNull()
-        if (qty != null && qty > 0) {
-          // MW = (Module Quantity * Module Watt) / 1,000,000
-          val mw = (qty * watt) / 1_000_000.0
-          "${numberFormat.format(mw)} MW"
-        } else {
-          "—"
-        }
+    } else {
+      val qty = quantityInput.toDoubleOrNull()
+      mwInput = if (w != null && w > 0.0 && qty != null && qty > 0.0) {
+        formatMw(qty * w / 1_000_000.0)
+      } else {
+        ""
       }
+    }
+  }
+
+  val summary: String? = run {
+    val w = wattInput.toDoubleOrNull()
+    val mw = mwInput.toDoubleOrNull()
+    val qty = quantityInput.toDoubleOrNull()
+    if (w == null || w <= 0.0 || mw == null || qty == null || mw <= 0.0 || qty <= 0.0) {
+      null
+    } else if (lastEditedMw) {
+      "Required Module Quantity: ${integerFormat.format(qty)} Modules"
+    } else {
+      "Total Plant Output: ${numberFormat.format(mw)} MW"
     }
   }
 
@@ -113,137 +128,91 @@ fun SolarCalculatorCard(
         .padding(20.dp)
     ) {
       // Header
-      Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween,
-        modifier = Modifier.fillMaxWidth()
-      ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-          Box(
-            modifier = Modifier
-              .size(40.dp)
-              .clip(RoundedCornerShape(10.dp))
-              .background(SolarBlueLight),
-            contentAlignment = Alignment.Center
-          ) {
-            Icon(
-              imageVector = Icons.Default.Calculate,
-              contentDescription = null,
-              tint = SolarBlueDark,
-              modifier = Modifier.size(24.dp)
-            )
-          }
-          Spacer(modifier = Modifier.width(12.dp))
-          Column {
-            Text(
-              text = "Solar Calculator",
-              fontSize = 18.sp,
-              fontWeight = FontWeight.Bold,
-              color = TextPrimary
-            )
-            Text(
-              text = "Quick manufacturing capacity sizing",
-              fontSize = 12.sp,
-              color = TextSecondary
-            )
-          }
-        }
-
+      Row(verticalAlignment = Alignment.CenterVertically) {
         Box(
           modifier = Modifier
-            .clip(RoundedCornerShape(20.dp))
-            .background(Color(0xFFFEF3C7))
-            .padding(horizontal = 8.dp, vertical = 4.dp)
+            .size(40.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .background(SolarBlueLight),
+          contentAlignment = Alignment.Center
         ) {
-          Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-              imageVector = Icons.Default.WbSunny,
-              contentDescription = null,
-              tint = SolarGold,
-              modifier = Modifier.size(14.dp)
-            )
-            Spacer(modifier = Modifier.width(4.dp))
-            Text(
-              text = "Formula Tool",
-              fontSize = 11.sp,
-              fontWeight = FontWeight.SemiBold,
-              color = Color(0xFF92400E)
-            )
-          }
+          Icon(
+            imageVector = Icons.Default.Calculate,
+            contentDescription = null,
+            tint = SolarBlueDark,
+            modifier = Modifier.size(24.dp)
+          )
+        }
+        Spacer(modifier = Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+          Text(
+            text = "Solar Calculator",
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
+            color = TextPrimary
+          )
+          Text(
+            text = "Quick manufacturing capacity sizing",
+            fontSize = 12.sp,
+            color = TextSecondary
+          )
         }
       }
 
-      Spacer(modifier = Modifier.height(16.dp))
+      Spacer(modifier = Modifier.height(10.dp))
 
-      // Tabs: A vs B
-      TabRow(
-        selectedTabIndex = if (mode == SolarCalculatorMode.MW_TO_QUANTITY) 0 else 1,
-        containerColor = Color(0xFFF1F5F9),
-        contentColor = SolarNavyDark,
-        modifier = Modifier.clip(RoundedCornerShape(12.dp))
-      ) {
-        Tab(
-          selected = mode == SolarCalculatorMode.MW_TO_QUANTITY,
-          onClick = { mode = SolarCalculatorMode.MW_TO_QUANTITY },
-          modifier = Modifier.testTag("calc_tab_mw_to_qty"),
-          text = {
-            Text(
-              text = "MW → Module Quantity",
-              fontWeight = if (mode == SolarCalculatorMode.MW_TO_QUANTITY) FontWeight.Bold else FontWeight.Normal,
-              fontSize = 13.sp
-            )
-          }
-        )
-        Tab(
-          selected = mode == SolarCalculatorMode.QUANTITY_TO_MW,
-          onClick = { mode = SolarCalculatorMode.QUANTITY_TO_MW },
-          modifier = Modifier.testTag("calc_tab_qty_to_mw"),
-          text = {
-            Text(
-              text = "Quantity → MW",
-              fontWeight = if (mode == SolarCalculatorMode.QUANTITY_TO_MW) FontWeight.Bold else FontWeight.Normal,
-              fontSize = 13.sp
-            )
-          }
-        )
-      }
+      Text(
+        text = "Enter MW and Watt to get Module Quantity. Or enter Module Quantity and Watt to get MW.",
+        fontSize = 12.sp,
+        color = TextSecondary
+      )
 
-      Spacer(modifier = Modifier.height(16.dp))
+      Spacer(modifier = Modifier.height(14.dp))
 
-      // Inputs
-      if (mode == SolarCalculatorMode.MW_TO_QUANTITY) {
-        OutlinedTextField(
-          value = mwInput,
-          onValueChange = { mwInput = it },
-          label = { Text("Plant Capacity (MW)") },
-          placeholder = { Text("e.g. 10.0") },
-          trailingIcon = { Text("MW", color = TextMuted, modifier = Modifier.padding(end = 12.dp)) },
-          keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-          singleLine = true,
-          modifier = Modifier
-            .fillMaxWidth()
-            .testTag("calc_input_mw")
-        )
-      } else {
-        OutlinedTextField(
-          value = quantityInput,
-          onValueChange = { quantityInput = it },
-          label = { Text("Module Quantity (Pcs)") },
-          placeholder = { Text("e.g. 18,182") },
-          trailingIcon = { Text("Pcs", color = TextMuted, modifier = Modifier.padding(end = 12.dp)) },
-          keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-          singleLine = true,
-          modifier = Modifier
-            .fillMaxWidth()
-            .testTag("calc_input_quantity")
-        )
-      }
+      OutlinedTextField(
+        value = mwInput,
+        onValueChange = {
+          mwInput = cleanNumber(it)
+          lastEditedMw = true
+          recalculate(true, wattInput)
+        },
+        label = { Text("Plant Capacity (MW)") },
+        placeholder = { Text("e.g. 10") },
+        trailingIcon = { Text("MW", color = TextMuted, modifier = Modifier.padding(end = 12.dp)) },
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+        singleLine = true,
+        modifier = Modifier
+          .fillMaxWidth()
+          .testTag("calc_input_mw")
+      )
 
-      Spacer(modifier = Modifier.height(12.dp))
+      Spacer(modifier = Modifier.height(10.dp))
+
+      OutlinedTextField(
+        value = quantityInput,
+        onValueChange = {
+          quantityInput = cleanNumber(it)
+          lastEditedMw = false
+          recalculate(false, wattInput)
+        },
+        label = { Text("Module Quantity (Pcs)") },
+        placeholder = { Text("e.g. 18182") },
+        trailingIcon = { Text("Pcs", color = TextMuted, modifier = Modifier.padding(end = 12.dp)) },
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        singleLine = true,
+        modifier = Modifier
+          .fillMaxWidth()
+          .testTag("calc_input_quantity")
+      )
+
+      Spacer(modifier = Modifier.height(10.dp))
 
       OutlinedTextField(
         value = wattInput,
-        onValueChange = { wattInput = it },
+        onValueChange = {
+          wattInput = cleanNumber(it)
+          recalculate(lastEditedMw, wattInput)
+        },
         label = { Text("Module Rating (Watt / Wp)") },
         placeholder = { Text("e.g. 550") },
         trailingIcon = { Text("Wp", color = TextMuted, modifier = Modifier.padding(end = 12.dp)) },
@@ -254,45 +223,35 @@ fun SolarCalculatorCard(
           .testTag("calc_input_watt")
       )
 
-      Spacer(modifier = Modifier.height(16.dp))
+      Spacer(modifier = Modifier.height(14.dp))
 
-      // Calculation Result Box
+      // Result box
       Box(
         modifier = Modifier
           .fillMaxWidth()
           .clip(RoundedCornerShape(12.dp))
           .background(Color(0xFFF8FAFC))
-          .padding(16.dp)
+          .padding(14.dp)
       ) {
         Column {
           Text(
-            text = if (mode == SolarCalculatorMode.MW_TO_QUANTITY) "Required Module Quantity:" else "Total Plant Output:",
-            fontSize = 12.sp,
-            color = TextSecondary,
-            fontWeight = FontWeight.Medium
+            text = summary ?: "Enter values to see the result",
+            fontSize = if (summary != null) 18.sp else 14.sp,
+            fontWeight = if (summary != null) FontWeight.ExtraBold else FontWeight.Medium,
+            color = if (summary != null) SolarBlueDark else TextSecondary
           )
           Spacer(modifier = Modifier.height(4.dp))
           Text(
-            text = calculatedResult,
-            fontSize = 24.sp,
-            fontWeight = FontWeight.ExtraBold,
-            color = if (calculatedResult.contains("valid") || calculatedResult == "—") TextSecondary else SolarBlueDark
-          )
-          Spacer(modifier = Modifier.height(4.dp))
-          Text(
-            text = if (mode == SolarCalculatorMode.MW_TO_QUANTITY)
-              "Formula: (MW × 1,000,000) / Module Watt"
-            else
-              "Formula: (Module Quantity × Module Watt) / 1,000,000",
+            text = "MW to Quantity = (MW × 1,000,000) / Watt\nQuantity to MW = (Quantity × Watt) / 1,000,000",
             fontSize = 11.sp,
-            color = TextMuted
+            color = TextMuted,
+            lineHeight = 16.sp
           )
         }
       }
 
-      Spacer(modifier = Modifier.height(16.dp))
+      Spacer(modifier = Modifier.height(14.dp))
 
-      // Action buttons: Clear & Reset
       Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -313,10 +272,10 @@ fun SolarCalculatorCard(
 
         OutlinedButton(
           onClick = {
-            mode = SolarCalculatorMode.MW_TO_QUANTITY
             mwInput = "10"
             quantityInput = "18182"
             wattInput = "550"
+            lastEditedMw = true
           },
           modifier = Modifier
             .weight(1f)

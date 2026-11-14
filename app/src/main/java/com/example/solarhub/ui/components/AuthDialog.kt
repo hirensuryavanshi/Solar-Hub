@@ -63,7 +63,8 @@ fun AuthDialog(
   currentRole: UserRole,
   onRoleSelected: (UserRole) -> Unit,
   onAdminLogin: (String) -> Boolean,
-  onDismiss: () -> Unit
+  onDismiss: () -> Unit,
+  onLogout: (() -> Unit)? = null
 ) {
   val context = LocalContext.current
   var selectedTab by remember { mutableStateOf(currentRole) }
@@ -205,8 +206,7 @@ fun AuthDialog(
                 adminPin = it
                 errorMessage = null
               },
-              label = { Text("Admin PIN / Password") },
-              placeholder = { Text("Enter 1234") },
+              label = { Text("Admin Password") },
               visualTransformation = PasswordVisualTransformation(),
               keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
               singleLine = true,
@@ -225,13 +225,17 @@ fun AuthDialog(
               )
             }
 
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-              text = "Default Admin PIN: 1234",
-              fontSize = 11.sp,
-              color = TextMuted,
-              fontWeight = FontWeight.SemiBold
-            )
+          }
+        }
+
+        if (onLogout != null) {
+          TextButton(
+            onClick = {
+              onLogout()
+              onDismiss()
+            }
+          ) {
+            Text("Log out / Change user", color = Color.Red, fontSize = 12.sp)
           }
         }
       }
@@ -250,7 +254,7 @@ fun AuthDialog(
               Toast.makeText(context, "Admin Access Granted", Toast.LENGTH_SHORT).show()
               onDismiss()
             } else {
-              errorMessage = "Incorrect PIN. (Use 1234 or 'admin')"
+              errorMessage = "Incorrect password"
             }
           }
         },

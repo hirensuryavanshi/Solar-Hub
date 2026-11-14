@@ -87,96 +87,80 @@ fun DocumentViewerContainer(
 ) {
   val context = LocalContext.current
   var isFullscreenImageOpen by remember { mutableStateOf(false) }
+  val attachments = remember(content.attachmentUrlOrPath, content.attachmentName, content.attachmentMimeType) {
+    AttachmentUtils.parse(content)
+  }
 
   Column(
     modifier = modifier.fillMaxWidth()
   ) {
-    // Media / Document viewer section based on type
-    when (content.contentType) {
-      ContentType.PDF -> {
-        PdfViewerSection(
-          content = content,
-          onDownload = { downloadFile(context, content) }
-        )
+    if (attachments.isNotEmpty()) {
+      // Text first, then every photo / video / PDF / document the admin attached
+      if (content.contentBody.isNotBlank()) {
+        CleanReadingLayout(text = content.contentBody)
+        Spacer(modifier = Modifier.height(16.dp))
       }
-      ContentType.IMAGE -> {
-        ImageViewerSection(
-          content = content,
-          onOpenFullscreen = { isFullscreenImageOpen = true },
-          onDownload = { downloadFile(context, content) }
-        )
-      }
-      ContentType.VIDEO -> {
-        VideoPlayerSection(
-          content = content,
-          onDownload = { downloadFile(context, content) }
-        )
-      }
-      ContentType.EXCEL -> {
-        ExcelViewerSection(
-          content = content,
-          onDownload = { downloadFile(context, content) }
-        )
-      }
-      ContentType.WORD, ContentType.PPT, ContentType.TRAINING, ContentType.OTHER -> {
-        GenericDocumentViewerSection(
-          content = content,
-          onDownload = { downloadFile(context, content) }
-        )
-      }
-      ContentType.TEXT, ContentType.NOTICE -> {
-        // Text Information layout
-        TextContentViewerSection(
-          content = content,
-          onDownload = { downloadFile(context, content) }
-        )
-      }
-    }
-
-    // Open / Share the real attached file (PDF, photo, video, Office files)
-    if (!content.attachmentUrlOrPath.isNullOrBlank()) {
-      Spacer(modifier = Modifier.height(10.dp))
-      Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
-      ) {
-        Button(
-          onClick = { AttachmentUtils.open(context, content) },
-          colors = ButtonDefaults.buttonColors(containerColor = SolarNavyDark),
-          modifier = Modifier.weight(1f).testTag("button_open_file")
-        ) {
-          Text("Open File")
+      AttachmentList(attachments = attachments)
+    } else {
+      // Media / Document viewer section based on type
+      when (content.contentType) {
+        ContentType.PDF -> {
+          PdfViewerSection(
+            content = content,
+            onDownload = { downloadFile(context, content) }
+          )
         }
-        OutlinedButton(
-          onClick = { AttachmentUtils.share(context, content) },
-          modifier = Modifier.weight(1f).testTag("button_share_file")
-        ) {
-          Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(16.dp))
-          Spacer(modifier = Modifier.width(6.dp))
-          Text("Share")
+        ContentType.IMAGE -> {
+          ImageViewerSection(
+            content = content,
+            onOpenFullscreen = { isFullscreenImageOpen = true },
+            onDownload = { downloadFile(context, content) }
+          )
+        }
+        ContentType.VIDEO -> {
+          VideoPlayerSection(
+            content = content,
+            onDownload = { downloadFile(context, content) }
+          )
+        }
+        ContentType.EXCEL -> {
+          ExcelViewerSection(
+            content = content,
+            onDownload = { downloadFile(context, content) }
+          )
+        }
+        ContentType.WORD, ContentType.PPT, ContentType.TRAINING, ContentType.OTHER -> {
+          GenericDocumentViewerSection(
+            content = content,
+            onDownload = { downloadFile(context, content) }
+          )
+        }
+        ContentType.TEXT, ContentType.NOTICE -> {
+          TextContentViewerSection(
+            content = content,
+            onDownload = { downloadFile(context, content) }
+          )
         }
       }
-    }
 
-    // Always show clean reading layout for the main body/notes if present
-    if (content.contentBody.isNotBlank() && content.contentType != ContentType.TEXT && content.contentType != ContentType.NOTICE) {
-      Spacer(modifier = Modifier.height(20.dp))
-      Text(
-        text = "Content Details & Notes",
-        fontSize = 16.sp,
-        fontWeight = FontWeight.Bold,
-        color = TextPrimary
-      )
-      Spacer(modifier = Modifier.height(8.dp))
-      CleanReadingLayout(text = content.contentBody)
-    }
+      if (content.contentBody.isNotBlank() && content.contentType != ContentType.TEXT && content.contentType != ContentType.NOTICE) {
+        Spacer(modifier = Modifier.height(20.dp))
+        Text(
+          text = "Content Details & Notes",
+          fontSize = 16.sp,
+          fontWeight = FontWeight.Bold,
+          color = TextPrimary
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        CleanReadingLayout(text = content.contentBody)
+      }
 
-    // Fullscreen Image Dialog
-    if (isFullscreenImageOpen) {
-      FullscreenImageDialog(
-        content = content,
-        onDismiss = { isFullscreenImageOpen = false }
-      )
+      if (isFullscreenImageOpen) {
+        FullscreenImageDialog(
+          content = content,
+          onDismiss = { isFullscreenImageOpen = false }
+        )
+      }
     }
   }
 }
