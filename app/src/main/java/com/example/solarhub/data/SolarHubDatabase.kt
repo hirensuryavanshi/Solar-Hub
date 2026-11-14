@@ -4,14 +4,15 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @Database(
-  entities = [DepartmentEntity::class, ContentItemEntity::class],
-  version = 1,
+  entities = [DepartmentEntity::class, ContentItemEntity::class, UserRequestEntity::class],
+  version = 2,
   exportSchema = false
 )
 abstract class SolarHubDatabase : RoomDatabase() {
@@ -39,6 +40,24 @@ abstract class SolarHubDatabase : RoomDatabase() {
       DepartmentEntity("dept_hr_training", "HR & Training", "groups", 14, 1014L)
     )
 
+    // Adds the "user requests" table without touching any existing data
+    private val MIGRATION_1_2 = object : Migration(1, 2) {
+      override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+          "CREATE TABLE IF NOT EXISTS `user_requests` (" +
+            "`id` TEXT NOT NULL, " +
+            "`userName` TEXT NOT NULL, " +
+            "`userMobile` TEXT NOT NULL, " +
+            "`message` TEXT NOT NULL, " +
+            "`status` TEXT NOT NULL, " +
+            "`adminReply` TEXT NOT NULL, " +
+            "`createdAt` INTEGER NOT NULL, " +
+            "`updatedAt` INTEGER NOT NULL, " +
+            "PRIMARY KEY(`id`))"
+        )
+      }
+    }
+
     fun getDatabase(context: Context): SolarHubDatabase {
       return INSTANCE ?: synchronized(this) {
         val instance = Room.databaseBuilder(
@@ -46,6 +65,7 @@ abstract class SolarHubDatabase : RoomDatabase() {
           SolarHubDatabase::class.java,
           "solar_hub_database"
         )
+        .addMigrations(MIGRATION_1_2)
         .addCallback(object : Callback() {
           override fun onCreate(db: SupportSQLiteDatabase) {
             super.onCreate(db)

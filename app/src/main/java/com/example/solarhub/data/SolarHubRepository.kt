@@ -149,4 +149,30 @@ class SolarHubRepository(private val dao: SolarHubDao) {
     )
     dao.updateContent(ContentItemEntity.fromModel(updated))
   }
+
+  val allRequests: Flow<List<UserRequestEntity>> = dao.getAllRequests()
+
+  suspend fun submitRequest(name: String, mobile: String, message: String) {
+    val now = System.currentTimeMillis()
+    dao.insertRequest(
+      UserRequestEntity(
+        id = UUID.randomUUID().toString(),
+        userName = name.trim(),
+        userMobile = mobile.trim(),
+        message = message.trim(),
+        status = "PENDING",
+        adminReply = "",
+        createdAt = now,
+        updatedAt = now
+      )
+    )
+  }
+
+  suspend fun updateRequest(id: String, status: String, reply: String) {
+    dao.updateRequest(id, status, reply.trim(), System.currentTimeMillis())
+  }
+
+  suspend fun deleteRequest(id: String) {
+    dao.deleteRequest(id)
+  }
 }

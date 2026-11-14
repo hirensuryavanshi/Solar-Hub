@@ -74,4 +74,16 @@ interface SolarHubDao {
 
   @Query("DELETE FROM content_items WHERE id = :id")
   suspend fun deleteContent(id: String)
+
+  @Query("SELECT * FROM user_requests ORDER BY createdAt DESC")
+  fun getAllRequests(): Flow<List<UserRequestEntity>>
+
+  @Insert(onConflict = OnConflictStrategy.REPLACE)
+  suspend fun insertRequest(request: UserRequestEntity)
+
+  @Query("UPDATE user_requests SET status = :status, adminReply = :reply, updatedAt = :now WHERE id = :id")
+  suspend fun updateRequest(id: String, status: String, reply: String, now: Long)
+
+  @Query("DELETE FROM user_requests WHERE id = :id")
+  suspend fun deleteRequest(id: String)
 }

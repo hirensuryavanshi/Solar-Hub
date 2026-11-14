@@ -101,3 +101,15 @@ data class ContentItemEntity(
     )
   }
 }
+
+@Entity(tableName = "user_requests")
+data class UserRequestEntity(
+  @PrimaryKey val id: String,
+  val userName: String,
+  val userMobile: String,
+  val message: String,
+  val status: String,
+  val adminReply: String,
+  val createdAt: Long,
+  val updatedAt: Long
+)
