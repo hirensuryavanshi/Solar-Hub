@@ -35,11 +35,8 @@ abstract class SolarHubDatabase : RoomDatabase() {
       DepartmentEntity("dept_store", "Store", "warehouse", 10, 1009L),
       DepartmentEntity("dept_dispatch", "Dispatch", "local_shipping", 11, 1010L),
       DepartmentEntity("dept_rnd", "R&D", "science", 12, 1011L),
-      DepartmentEntity("dept_engineering", "Engineering", "engineering", 13, 1012L),
-      DepartmentEntity("dept_ehs", "EHS", "eco", 14, 1013L),
-      DepartmentEntity("dept_hr_training", "HR & Training", "groups", 15, 1014L),
-      DepartmentEntity("dept_purchase", "Purchase", "shopping_cart", 16, 1015L),
-      DepartmentEntity("dept_planning_inventory", "Planning & Inventory", "calendar_month", 17, 1016L)
+      DepartmentEntity("dept_ehs", "EHS", "eco", 13, 1013L),
+      DepartmentEntity("dept_hr_training", "HR & Training", "groups", 14, 1014L)
     )
 
     fun getDatabase(context: Context): SolarHubDatabase {

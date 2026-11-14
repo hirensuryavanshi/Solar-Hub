@@ -20,6 +20,11 @@ class SolarHubRepository(private val dao: SolarHubDao) {
     if (count == 0) {
       dao.insertDepartments(SolarHubDatabase.INITIAL_DEPARTMENTS)
     }
+    // Remove the 3 extra default departments from earlier versions (keep only the official 14)
+    listOf("dept_engineering", "dept_purchase", "dept_planning_inventory").forEach { oldId ->
+      dao.deleteContentByDepartment(oldId)
+      dao.deleteDepartment(oldId)
+    }
   }
 
   fun getDepartmentById(id: String): Flow<Department?> {
