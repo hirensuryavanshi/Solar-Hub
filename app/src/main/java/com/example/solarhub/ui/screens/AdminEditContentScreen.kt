@@ -1,6 +1,13 @@
 package com.example.solarhub.ui.screens
 
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.rememberCoroutineScope
+import com.example.solarhub.ui.components.AttachmentUtils
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -111,6 +118,31 @@ fun AdminEditContentScreen(
 
   var deptDropdownExpanded by remember { mutableStateOf(false) }
 
+  var attachmentPath by remember { mutableStateOf<String?>(null) }
+  var attachmentMime by remember { mutableStateOf<String?>(null) }
+  var isCopying by remember { mutableStateOf(false) }
+  val scope = rememberCoroutineScope()
+
+  val filePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+    if (uri != null) {
+      scope.launch {
+        isCopying = true
+        val picked = withContext(Dispatchers.IO) { AttachmentUtils.copyToInternal(context, uri) }
+        isCopying = false
+        if (picked != null) {
+          attachmentPath = picked.path
+          attachmentName = picked.name
+          attachmentSizeBytes = picked.size
+          attachmentMime = picked.mime
+          AttachmentUtils.detectType(picked.name, picked.mime)?.let { contentType = it }
+          Toast.makeText(context, "File added: ${picked.name}", Toast.LENGTH_SHORT).show()
+        } else {
+          Toast.makeText(context, "Could not add this file. Try again.", Toast.LENGTH_LONG).show()
+        }
+      }
+    }
+  }
+
   // If editing an existing item, load its data
   if (contentId != null) {
     val existingItem by viewModel.getContentById(contentId).collectAsState(initial = null)
@@ -125,6 +157,8 @@ fun AdminEditContentScreen(
         contentType = item.contentType
         attachmentName = item.attachmentName ?: ""
         attachmentSizeBytes = item.attachmentSizeBytes
+        attachmentPath = item.attachmentUrlOrPath
+        attachmentMime = item.attachmentMimeType
         isPublishedState = item.isPublished
       }
     }
@@ -259,9 +293,6 @@ fun AdminEditContentScreen(
                   selected = isSelected,
                   onClick = {
                     contentType = type
-                    if (attachmentName.isBlank() && type != ContentType.TEXT && type != ContentType.NOTICE) {
-                      attachmentName = "${title.ifBlank { "solar_resource" }.replace(" ", "_")}.${type.extensionHint}"
-                    }
                   },
                   label = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -496,52 +527,64 @@ fun AdminEditContentScreen(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            OutlinedTextField(
-              value = attachmentName,
-              onValueChange = { attachmentName = it },
-              label = { Text("Attachment File Name") },
-              placeholder = { Text("e.g. Solar_Module_SOP_Rev3.pdf") },
-              leadingIcon = {
-                Icon(Icons.Default.AttachFile, contentDescription = null, tint = SolarNavyDark)
-              },
-              trailingIcon = {
-                if (attachmentName.isNotBlank()) {
-                  IconButton(onClick = { attachmentName = "" }) {
-                    Icon(Icons.Default.Clear, contentDescription = "Clear")
+            Button(
+              onClick = { filePicker.launch(arrayOf("*/*")) },
+              enabled = !isCopying,
+              colors = ButtonDefaults.buttonColors(containerColor = SolarBlue),
+              shape = RoundedCornerShape(12.dp),
+              modifier = Modifier.fillMaxWidth().testTag("button_choose_file")
+            ) {
+              Icon(Icons.Default.AttachFile, contentDescription = null, modifier = Modifier.size(18.dp))
+              Spacer(modifier = Modifier.width(8.dp))
+              Text(if (isCopying) "Adding file..." else "Choose File (PDF, Photo, Video, Document)")
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            if (attachmentName.isNotBlank()) {
+              Surface(
+                shape = RoundedCornerShape(10.dp),
+                color = Color(0xFFEFF6FF),
+                modifier = Modifier.fillMaxWidth()
+              ) {
+                Row(
+                  modifier = Modifier.padding(12.dp),
+                  verticalAlignment = Alignment.CenterVertically
+                ) {
+                  Icon(Icons.Default.AttachFile, contentDescription = null, tint = SolarNavyDark)
+                  Spacer(modifier = Modifier.width(8.dp))
+                  Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                      text = attachmentName,
+                      fontWeight = FontWeight.SemiBold,
+                      fontSize = 13.sp,
+                      color = TextPrimary,
+                      maxLines = 2
+                    )
+                    Text(
+                      text = if (attachmentPath != null) AttachmentUtils.formatSize(attachmentSizeBytes) else "No file added - tap Choose File",
+                      fontSize = 11.sp,
+                      color = TextSecondary
+                    )
+                  }
+                  IconButton(
+                    onClick = {
+                      attachmentName = ""
+                      attachmentPath = null
+                      attachmentMime = null
+                      Toast.makeText(context, "File removed", Toast.LENGTH_SHORT).show()
+                    }
+                  ) {
+                    Icon(Icons.Default.Clear, contentDescription = "Remove file", tint = TextPrimary)
                   }
                 }
-              },
-              singleLine = true,
-              modifier = Modifier.fillMaxWidth().testTag("input_attachment_name")
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Attachment shortcut buttons
-            Row(
-              modifier = Modifier.fillMaxWidth(),
-              horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-              OutlinedButton(
-                onClick = {
-                  val sanitizedTitle = title.ifBlank { "Solar_Knowledge" }.replace(" ", "_")
-                  attachmentName = "${sanitizedTitle}_Doc.${contentType.extensionHint}"
-                  Toast.makeText(context, "Attached document: $attachmentName", Toast.LENGTH_SHORT).show()
-                },
-                modifier = Modifier.weight(1f)
-              ) {
-                Text("Generate Attachment", fontSize = 11.sp)
               }
-
-              OutlinedButton(
-                onClick = {
-                  attachmentName = ""
-                  Toast.makeText(context, "Attachment cleared", Toast.LENGTH_SHORT).show()
-                },
-                modifier = Modifier.weight(0.7f)
-              ) {
-                Text("Remove File", fontSize = 11.sp)
-              }
+            } else {
+              Text(
+                text = "No file selected. You can also publish text only.",
+                fontSize = 12.sp,
+                color = TextSecondary
+              )
             }
           }
         }
@@ -578,7 +621,9 @@ fun AdminEditContentScreen(
                 contentType = contentType,
                 attachmentName = attachmentName,
                 attachmentSizeBytes = attachmentSizeBytes,
-                isPublished = false
+                isPublished = false,
+                attachmentUrlOrPath = attachmentPath,
+                attachmentMimeType = attachmentMime
               )
               Toast.makeText(context, "Saved as Draft successfully!", Toast.LENGTH_SHORT).show()
               viewModel.navigateBack()
@@ -614,7 +659,9 @@ fun AdminEditContentScreen(
                 contentType = contentType,
                 attachmentName = attachmentName,
                 attachmentSizeBytes = attachmentSizeBytes,
-                isPublished = true
+                isPublished = true,
+                attachmentUrlOrPath = attachmentPath,
+                attachmentMimeType = attachmentMime
               )
               Toast.makeText(context, "Published Information Live!", Toast.LENGTH_SHORT).show()
               viewModel.navigateBack()

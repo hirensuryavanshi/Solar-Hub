@@ -52,6 +52,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.solarhub.model.ContentItem
 import com.example.solarhub.model.UserRole
+import com.example.solarhub.ui.components.AttachmentUtils
 import com.example.solarhub.ui.components.DocumentViewerContainer
 import com.example.solarhub.ui.components.IconHelper
 import com.example.solarhub.viewmodel.Screen
@@ -113,6 +114,12 @@ fun ContentDetailScreen(
         },
         actions = {
           if (item != null) {
+            IconButton(
+              onClick = { AttachmentUtils.share(context, item) },
+              modifier = Modifier.testTag("top_bar_share_button")
+            ) {
+              Icon(Icons.Default.Share, contentDescription = "Share", tint = Color.White)
+            }
             IconButton(
               onClick = { downloadFile(context, item) },
               modifier = Modifier.testTag("top_bar_download_button")
@@ -280,24 +287,5 @@ fun ContentDetailScreen(
 }
 
 private fun downloadFile(context: Context, content: ContentItem) {
-  try {
-    val fileName = content.attachmentName ?: "${content.title.replace(" ", "_")}.${content.contentType.extensionHint}"
-    val file = File(context.cacheDir, fileName)
-    if (!file.exists()) {
-      val textData = "SOLAR HUB - SOLAR MANUFACTURING KNOWLEDGE PLATFORM\n" +
-          "Title: ${content.title}\n" +
-          "Category: ${content.category}\n" +
-          "Description: ${content.description}\n\n" +
-          "Content Body:\n${content.contentBody}\n"
-      file.writeText(textData)
-    }
-
-    Toast.makeText(
-      context,
-      "Downloaded $fileName successfully!",
-      Toast.LENGTH_LONG
-    ).show()
-  } catch (_: Exception) {
-    Toast.makeText(context, "File downloaded: ${content.title}", Toast.LENGTH_SHORT).show()
-  }
+  AttachmentUtils.download(context, content)
 }
