@@ -132,7 +132,9 @@ class SolarHubViewModel(
     contentType: ContentType,
     attachmentName: String?,
     attachmentSizeBytes: Long,
-    isPublished: Boolean
+    isPublished: Boolean,
+    attachmentUrlOrPath: String? = null,
+    attachmentMimeType: String? = null
   ) {
     viewModelScope.launch {
       val now = System.currentTimeMillis()
@@ -146,7 +148,9 @@ class SolarHubViewModel(
         contentBody = contentBody.trim(),
         contentType = contentType,
         attachmentName = attachmentName?.ifBlank { null },
+        attachmentUrlOrPath = attachmentUrlOrPath,
         attachmentSizeBytes = attachmentSizeBytes,
+        attachmentMimeType = attachmentMimeType,
         isPublished = isPublished,
         publishedAt = now,
         updatedAt = now,
