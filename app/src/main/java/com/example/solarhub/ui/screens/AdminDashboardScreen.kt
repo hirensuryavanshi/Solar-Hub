@@ -187,6 +187,16 @@ fun AdminDashboardScreen(
         }
       }
 
+      // 1b. User requests entry
+      item {
+        val requests by viewModel.allRequests.collectAsState()
+        RequestsEntryCard(
+          isAdmin = true,
+          pendingCount = requests.count { it.status == RequestStatus.PENDING },
+          onClick = { viewModel.navigateTo(Screen.UserRequests) }
+        )
+      }
+
       // 2. Tabs: Published vs Drafts
       item {
         TabRow(

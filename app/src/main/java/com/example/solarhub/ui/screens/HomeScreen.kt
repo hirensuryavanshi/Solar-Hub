@@ -177,6 +177,19 @@ fun HomeScreen(
         }
       }
 
+      // 3b. REQUESTS ENTRY
+      item {
+        Spacer(modifier = Modifier.height(24.dp))
+        val requests by viewModel.allRequests.collectAsState()
+        Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+          RequestsEntryCard(
+            isAdmin = userRole == UserRole.ADMIN,
+            pendingCount = requests.count { it.status == "PENDING" },
+            onClick = { viewModel.navigateTo(Screen.UserRequests) }
+          )
+        }
+      }
+
       // 4. QUICK ACCESS – SOLAR CALCULATOR SECTION
       item {
         Spacer(modifier = Modifier.height(28.dp))
@@ -327,7 +340,7 @@ fun DarkNavyWelcomeSection(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
       ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
           Box(
             modifier = Modifier
               .size(42.dp)
@@ -388,7 +401,9 @@ fun DarkNavyWelcomeSection(
                 text = if (userRole == UserRole.ADMIN) "ADMIN" else "EMPLOYEE",
                 color = Color.White,
                 fontSize = 11.sp,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                softWrap = false
               )
             }
           }

@@ -3,6 +3,7 @@ package com.example.solarhub.ui.screens
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.rememberCoroutineScope
 import com.example.solarhub.ui.components.AttachmentUtils
 import kotlinx.coroutines.Dispatchers
@@ -118,26 +119,26 @@ fun AdminEditContentScreen(
 
   var deptDropdownExpanded by remember { mutableStateOf(false) }
 
-  var attachmentPath by remember { mutableStateOf<String?>(null) }
-  var attachmentMime by remember { mutableStateOf<String?>(null) }
+  val attachments = remember { mutableStateListOf<AttachmentUtils.Attachment>() }
   var isCopying by remember { mutableStateOf(false) }
   val scope = rememberCoroutineScope()
 
-  val filePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-    if (uri != null) {
+  val filePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
+    if (uris.isNotEmpty()) {
       scope.launch {
         isCopying = true
-        val picked = withContext(Dispatchers.IO) { AttachmentUtils.copyToInternal(context, uri) }
+        val picked = withContext(Dispatchers.IO) {
+          uris.mapNotNull { AttachmentUtils.copyToInternal(context, it) }
+        }
         isCopying = false
-        if (picked != null) {
-          attachmentPath = picked.path
-          attachmentName = picked.name
-          attachmentSizeBytes = picked.size
-          attachmentMime = picked.mime
-          AttachmentUtils.detectType(picked.name, picked.mime)?.let { contentType = it }
-          Toast.makeText(context, "File added: ${picked.name}", Toast.LENGTH_SHORT).show()
-        } else {
-          Toast.makeText(context, "Could not add this file. Try again.", Toast.LENGTH_LONG).show()
+        if (picked.isNotEmpty()) {
+          attachments.addAll(picked)
+          val first = attachments.first()
+          contentType = AttachmentUtils.typeOf(first.name, first.mime)
+          Toast.makeText(context, "${picked.size} file(s) added", Toast.LENGTH_SHORT).show()
+        }
+        if (picked.size < uris.size) {
+          Toast.makeText(context, "Some files could not be added", Toast.LENGTH_LONG).show()
         }
       }
     }
@@ -155,10 +156,8 @@ fun AdminEditContentScreen(
         description = item.description
         contentBody = item.contentBody
         contentType = item.contentType
-        attachmentName = item.attachmentName ?: ""
-        attachmentSizeBytes = item.attachmentSizeBytes
-        attachmentPath = item.attachmentUrlOrPath
-        attachmentMime = item.attachmentMimeType
+        attachments.clear()
+        attachments.addAll(AttachmentUtils.parse(item))
         isPublishedState = item.isPublished
       }
     }
@@ -318,7 +317,7 @@ fun AdminEditContentScreen(
         }
       }
 
-      // 3. Category & Subcategory
+      // 3. Content Title & Description
       item {
         Card(
           modifier = Modifier.fillMaxWidth(),
@@ -328,44 +327,7 @@ fun AdminEditContentScreen(
         ) {
           Column(modifier = Modifier.padding(16.dp)) {
             Text(
-              text = "3. Category & Subcategory (Optional)",
-              fontWeight = FontWeight.Bold,
-              fontSize = 14.sp,
-              color = TextPrimary
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-              OutlinedTextField(
-                value = category,
-                onValueChange = { category = it },
-                label = { Text("Category") },
-                placeholder = { Text("e.g. Work Instructions") },
-                modifier = Modifier.weight(1f).testTag("input_category")
-              )
-              OutlinedTextField(
-                value = subcategory,
-                onValueChange = { subcategory = it },
-                label = { Text("Subcategory") },
-                placeholder = { Text("e.g. Lamination") },
-                modifier = Modifier.weight(1f).testTag("input_subcategory")
-              )
-            }
-          }
-        }
-      }
-
-      // 4. Content Title & Description
-      item {
-        Card(
-          modifier = Modifier.fillMaxWidth(),
-          shape = RoundedCornerShape(14.dp),
-          colors = CardDefaults.cardColors(containerColor = SurfaceCard),
-          elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-        ) {
-          Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-              text = "4. Information Title & Summary *",
+              text = "3. Information Title & Summary *",
               fontWeight = FontWeight.Bold,
               fontSize = 14.sp,
               color = TextPrimary
@@ -406,7 +368,7 @@ fun AdminEditContentScreen(
         ) {
           Column(modifier = Modifier.padding(16.dp)) {
             Text(
-              text = "5. Rich Text Information & Notes",
+              text = "4. Text Information & Notes",
               fontWeight = FontWeight.Bold,
               fontSize = 14.sp,
               color = TextPrimary
@@ -506,7 +468,7 @@ fun AdminEditContentScreen(
               verticalAlignment = Alignment.CenterVertically
             ) {
               Text(
-                text = "6. File & Media Attachment",
+                text = "5. Photos, Videos & Documents",
                 fontWeight = FontWeight.Bold,
                 fontSize = 14.sp,
                 color = TextPrimary
@@ -527,6 +489,14 @@ fun AdminEditContentScreen(
 
             Spacer(modifier = Modifier.height(10.dp))
 
+            Text(
+              text = "Write your text in the box above, then add any number of photos, videos, PDFs or documents.",
+              fontSize = 12.sp,
+              color = TextSecondary
+            )
+
+            Spacer(modifier = Modifier.height(10.dp))
+
             Button(
               onClick = { filePicker.launch(arrayOf("*/*")) },
               enabled = !isCopying,
@@ -536,55 +506,56 @@ fun AdminEditContentScreen(
             ) {
               Icon(Icons.Default.AttachFile, contentDescription = null, modifier = Modifier.size(18.dp))
               Spacer(modifier = Modifier.width(8.dp))
-              Text(if (isCopying) "Adding file..." else "Choose File (PDF, Photo, Video, Document)")
+              Text(if (isCopying) "Adding files..." else "Add Photos / Videos / Documents")
             }
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            if (attachmentName.isNotBlank()) {
-              Surface(
-                shape = RoundedCornerShape(10.dp),
-                color = Color(0xFFEFF6FF),
-                modifier = Modifier.fillMaxWidth()
-              ) {
-                Row(
-                  modifier = Modifier.padding(12.dp),
-                  verticalAlignment = Alignment.CenterVertically
-                ) {
-                  Icon(Icons.Default.AttachFile, contentDescription = null, tint = SolarNavyDark)
-                  Spacer(modifier = Modifier.width(8.dp))
-                  Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                      text = attachmentName,
-                      fontWeight = FontWeight.SemiBold,
-                      fontSize = 13.sp,
-                      color = TextPrimary,
-                      maxLines = 2
-                    )
-                    Text(
-                      text = if (attachmentPath != null) AttachmentUtils.formatSize(attachmentSizeBytes) else "No file added - tap Choose File",
-                      fontSize = 11.sp,
-                      color = TextSecondary
-                    )
-                  }
-                  IconButton(
-                    onClick = {
-                      attachmentName = ""
-                      attachmentPath = null
-                      attachmentMime = null
-                      Toast.makeText(context, "File removed", Toast.LENGTH_SHORT).show()
-                    }
-                  ) {
-                    Icon(Icons.Default.Clear, contentDescription = "Remove file", tint = TextPrimary)
-                  }
-                }
-              }
-            } else {
+            if (attachments.isEmpty()) {
               Text(
-                text = "No file selected. You can also publish text only.",
+                text = "No files added. You can also publish text only.",
                 fontSize = 12.sp,
                 color = TextSecondary
               )
+            } else {
+              attachments.toList().forEachIndexed { index, attachment ->
+                Surface(
+                  shape = RoundedCornerShape(10.dp),
+                  color = Color(0xFFEFF6FF),
+                  modifier = Modifier.fillMaxWidth()
+                ) {
+                  Row(
+                    modifier = Modifier.padding(10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                  ) {
+                    Icon(
+                      imageVector = IconHelper.getContentTypeIcon(attachment.type),
+                      contentDescription = null,
+                      tint = IconHelper.getContentTypeColor(attachment.type),
+                      modifier = Modifier.size(22.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                      Text(
+                        text = attachment.name,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 13.sp,
+                        color = TextPrimary,
+                        maxLines = 2
+                      )
+                      Text(
+                        text = AttachmentUtils.formatSize(attachment.file.length()),
+                        fontSize = 11.sp,
+                        color = TextSecondary
+                      )
+                    }
+                    IconButton(onClick = { attachments.removeAt(index) }) {
+                      Icon(Icons.Default.Clear, contentDescription = "Remove file", tint = TextPrimary)
+                    }
+                  }
+                }
+                Spacer(modifier = Modifier.height(6.dp))
+              }
             }
           }
         }
@@ -618,12 +589,12 @@ fun AdminEditContentScreen(
                 title = title,
                 description = description,
                 contentBody = contentBody,
-                contentType = contentType,
-                attachmentName = attachmentName,
-                attachmentSizeBytes = attachmentSizeBytes,
+                contentType = AttachmentUtils.effectiveType(contentType, attachments.isNotEmpty()),
+                attachmentName = AttachmentUtils.encode(attachments.toList()).names,
+                attachmentSizeBytes = AttachmentUtils.encode(attachments.toList()).totalSize,
                 isPublished = false,
-                attachmentUrlOrPath = attachmentPath,
-                attachmentMimeType = attachmentMime
+                attachmentUrlOrPath = AttachmentUtils.encode(attachments.toList()).paths,
+                attachmentMimeType = AttachmentUtils.encode(attachments.toList()).mimes
               )
               Toast.makeText(context, "Saved as Draft successfully!", Toast.LENGTH_SHORT).show()
               viewModel.navigateBack()
@@ -656,12 +627,12 @@ fun AdminEditContentScreen(
                 title = title,
                 description = description,
                 contentBody = contentBody,
-                contentType = contentType,
-                attachmentName = attachmentName,
-                attachmentSizeBytes = attachmentSizeBytes,
+                contentType = AttachmentUtils.effectiveType(contentType, attachments.isNotEmpty()),
+                attachmentName = AttachmentUtils.encode(attachments.toList()).names,
+                attachmentSizeBytes = AttachmentUtils.encode(attachments.toList()).totalSize,
                 isPublished = true,
-                attachmentUrlOrPath = attachmentPath,
-                attachmentMimeType = attachmentMime
+                attachmentUrlOrPath = AttachmentUtils.encode(attachments.toList()).paths,
+                attachmentMimeType = AttachmentUtils.encode(attachments.toList()).mimes
               )
               Toast.makeText(context, "Published Information Live!", Toast.LENGTH_SHORT).show()
               viewModel.navigateBack()
