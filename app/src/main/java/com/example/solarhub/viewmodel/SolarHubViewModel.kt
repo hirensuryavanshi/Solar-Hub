@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.solarhub.data.SolarHubRepository
+import com.example.solarhub.data.UserRequestEntity
 import com.example.solarhub.model.ContentItem
 import com.example.solarhub.model.ContentItemWithDepartment
 import com.example.solarhub.model.ContentType
@@ -18,6 +19,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.security.MessageDigest
 import java.util.UUID
 
 sealed interface Screen {
@@ -30,6 +32,7 @@ sealed interface Screen {
     val initialDepartmentId: String? = null
   ) : Screen
   data object AdminManageDepartments : Screen
+  data object UserRequests : Screen
 }
 
 class SolarHubViewModel(
@@ -56,6 +59,9 @@ class SolarHubViewModel(
     .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
   val allPublished: StateFlow<List<ContentItemWithDepartment>> = repository.getAllPublished()
+    .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+  val allRequests: StateFlow<List<UserRequestEntity>> = repository.allRequests
     .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
   @OptIn(ExperimentalCoroutinesApi::class)
@@ -102,13 +108,23 @@ class SolarHubViewModel(
     }
   }
 
-  fun verifyAndLoginAdmin(pin: String): Boolean {
-    // PIN 1234 or "admin" gives admin access
-    if (pin.trim() == "1234" || pin.trim().equals("admin", ignoreCase = true) || pin.trim().equals("solar123", ignoreCase = true)) {
+  fun verifyAndLoginAdmin(password: String): Boolean {
+    // The password itself is not stored in the app - only a one-way hash of it.
+    if (hashPassword(password.trim()) == ADMIN_PASSWORD_HASH) {
       setUserRole(UserRole.ADMIN)
       return true
     }
     return false
+  }
+
+  private fun hashPassword(value: String): String {
+    val bytes = MessageDigest.getInstance("SHA-256")
+      .digest(("SolarHub|" + value).toByteArray(Charsets.UTF_8))
+    return bytes.joinToString("") { "%02x".format(it) }
+  }
+
+  private companion object {
+    const val ADMIN_PASSWORD_HASH = "721ac2ecaa478601656240f046b48f8b6be87358467ea0e4b4dee292e645b0b8"
   }
 
   fun getDepartment(id: String) = repository.getDepartmentById(id)
@@ -169,6 +185,24 @@ class SolarHubViewModel(
   fun setContentPublishStatus(id: String, isPublished: Boolean) {
     viewModelScope.launch {
       repository.setContentPublishStatus(id, isPublished)
+    }
+  }
+
+  fun submitRequest(name: String, mobile: String, message: String) {
+    viewModelScope.launch {
+      repository.submitRequest(name, mobile, message)
+    }
+  }
+
+  fun updateRequest(id: String, status: String, reply: String) {
+    viewModelScope.launch {
+      repository.updateRequest(id, status, reply)
+    }
+  }
+
+  fun deleteRequest(id: String) {
+    viewModelScope.launch {
+      repository.deleteRequest(id)
     }
   }
 
