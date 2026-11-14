@@ -25,8 +25,8 @@ private val LightColorScheme = lightColorScheme(
   surface = SurfaceWhite,
   onSurface = TextPrimary,
   surfaceVariant = Color(0xFFF1F5F9),
-  onSurfaceVariant = TextSecondary,
-  outline = BorderLight
+  onSurfaceVariant = Color(0xFF334155),
+  outline = Color(0xFF64748B)
 )
 
 private val DarkColorScheme = darkColorScheme(
@@ -47,7 +47,7 @@ private val DarkColorScheme = darkColorScheme(
 
 @Composable
 fun SolarHubTheme(
-  darkTheme: Boolean = isSystemInDarkTheme(),
+  darkTheme: Boolean = false,
   content: @Composable () -> Unit
 ) {
   val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
