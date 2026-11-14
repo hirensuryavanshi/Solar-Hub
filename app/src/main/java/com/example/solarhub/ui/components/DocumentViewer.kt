@@ -133,6 +133,31 @@ fun DocumentViewerContainer(
       }
     }
 
+    // Open / Share the real attached file (PDF, photo, video, Office files)
+    if (!content.attachmentUrlOrPath.isNullOrBlank()) {
+      Spacer(modifier = Modifier.height(10.dp))
+      Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+      ) {
+        Button(
+          onClick = { AttachmentUtils.open(context, content) },
+          colors = ButtonDefaults.buttonColors(containerColor = SolarNavyDark),
+          modifier = Modifier.weight(1f).testTag("button_open_file")
+        ) {
+          Text("Open File")
+        }
+        OutlinedButton(
+          onClick = { AttachmentUtils.share(context, content) },
+          modifier = Modifier.weight(1f).testTag("button_share_file")
+        ) {
+          Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(16.dp))
+          Spacer(modifier = Modifier.width(6.dp))
+          Text("Share")
+        }
+      }
+    }
+
     // Always show clean reading layout for the main body/notes if present
     if (content.contentBody.isNotBlank() && content.contentType != ContentType.TEXT && content.contentType != ContentType.NOTICE) {
       Spacer(modifier = Modifier.height(20.dp))
@@ -532,7 +557,7 @@ fun ImageViewerSection(
       ) {
         if (!content.attachmentUrlOrPath.isNullOrBlank()) {
           AsyncImage(
-            model = content.attachmentUrlOrPath,
+            model = AttachmentUtils.imageModel(content.attachmentUrlOrPath),
             contentDescription = content.title,
             modifier = Modifier.fillMaxSize()
           )
@@ -584,7 +609,7 @@ fun FullscreenImageDialog(
       Box(modifier = Modifier.fillMaxSize()) {
         if (!content.attachmentUrlOrPath.isNullOrBlank()) {
           AsyncImage(
-            model = content.attachmentUrlOrPath,
+            model = AttachmentUtils.imageModel(content.attachmentUrlOrPath),
             contentDescription = content.title,
             modifier = Modifier.fillMaxSize()
           )
@@ -897,28 +922,7 @@ fun GenericDocumentViewerSection(
 }
 
 private fun downloadFile(context: Context, content: ContentItem) {
-  try {
-    val fileName = content.attachmentName ?: "${content.title.replace(" ", "_")}.${content.contentType.extensionHint}"
-    // Create downloaded file in cache or external files dir
-    val file = File(context.cacheDir, fileName)
-    if (!file.exists()) {
-      val textData = "SOLAR HUB - SOLAR MANUFACTURING KNOWLEDGE PLATFORM\n" +
-          "Department Content\n" +
-          "Title: ${content.title}\n" +
-          "Category: ${content.category}\n" +
-          "Description: ${content.description}\n\n" +
-          "Content Body:\n${content.contentBody}\n"
-      file.writeText(textData)
-    }
-
-    Toast.makeText(
-      context,
-      "Downloaded $fileName successfully!",
-      Toast.LENGTH_LONG
-    ).show()
-  } catch (e: Exception) {
-    Toast.makeText(context, "File downloaded: ${content.title}", Toast.LENGTH_SHORT).show()
-  }
+  AttachmentUtils.download(context, content)
 }
 
 private fun formatFileSize(bytes: Long): String {
