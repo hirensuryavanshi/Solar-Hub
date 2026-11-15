@@ -61,7 +61,8 @@ import kotlin.math.sin
 /** First screen: simple login with name and mobile number (no OTP). */
 @Composable
 fun LoginScreen(
-  onLogin: (name: String, mobile: String) -> Unit
+  onLogin: (name: String, mobile: String) -> Unit,
+  message: String? = null
 ) {
   var name by remember { mutableStateOf("") }
   var mobile by remember { mutableStateOf("") }
@@ -173,6 +174,11 @@ fun LoginScreen(
               .fillMaxWidth()
               .testTag("login_input_mobile")
           )
+
+          if (message != null && error == null) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(text = message, color = Color(0xFFDC2626), fontSize = 12.sp)
+          }
 
           if (error != null) {
             Spacer(modifier = Modifier.height(8.dp))

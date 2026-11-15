@@ -195,6 +195,16 @@ fun UserRequestsScreen(
       contentPadding = PaddingValues(16.dp),
       verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
+      item {
+        RequestSummary(
+          title = if (isAdmin) "All user requests" else "Your requests",
+          total = requests.size,
+          pending = requests.count { it.status == RequestStatus.PENDING },
+          inProgress = requests.count { it.status == RequestStatus.IN_PROGRESS },
+          done = requests.count { it.status == RequestStatus.DONE }
+        )
+      }
+
       if (!isAdmin) {
         item {
           Card(
@@ -412,5 +422,45 @@ private fun RequestCard(
         }
       }
     }
+  }
+}
+
+@Composable
+private fun RequestSummary(
+  title: String,
+  total: Int,
+  pending: Int,
+  inProgress: Int,
+  done: Int
+) {
+  Card(
+    modifier = Modifier
+      .fillMaxWidth()
+      .testTag("request_summary_card"),
+    shape = RoundedCornerShape(14.dp),
+    colors = CardDefaults.cardColors(containerColor = SurfaceCard),
+    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+  ) {
+    Column(modifier = Modifier.padding(16.dp)) {
+      Text(text = title, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = TextPrimary)
+      Spacer(modifier = Modifier.height(10.dp))
+      Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceEvenly
+      ) {
+        SummaryCount("Total", total, SolarBlue)
+        SummaryCount("Pending", pending, Color(0xFFD97706))
+        SummaryCount("In Progress", inProgress, Color(0xFF2563EB))
+        SummaryCount("Done", done, Color(0xFF16A34A))
+      }
+    }
+  }
+}
+
+@Composable
+private fun SummaryCount(label: String, value: Int, color: Color) {
+  Column(horizontalAlignment = Alignment.CenterHorizontally) {
+    Text(text = value.toString(), fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = color)
+    Text(text = label, fontSize = 11.sp, color = TextSecondary, maxLines = 1)
   }
 }

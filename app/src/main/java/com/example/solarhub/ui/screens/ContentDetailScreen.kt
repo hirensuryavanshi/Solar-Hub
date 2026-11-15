@@ -52,6 +52,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.solarhub.model.ContentItem
 import com.example.solarhub.model.UserRole
+import com.example.solarhub.ui.components.AttachmentList
 import com.example.solarhub.ui.components.AttachmentUtils
 import com.example.solarhub.ui.components.DocumentViewerContainer
 import com.example.solarhub.ui.components.IconHelper
@@ -152,6 +153,9 @@ fun ContentDetailScreen(
       }
     } else {
       val typeColor = IconHelper.getContentTypeColor(item.contentType)
+      val attachments = remember(item.attachmentUrlOrPath, item.attachmentName, item.attachmentMimeType) {
+        AttachmentUtils.parse(item)
+      }
 
       LazyColumn(
         modifier = Modifier
@@ -273,13 +277,30 @@ fun ContentDetailScreen(
                   )
                 }
               }
+
+              // Text and the attached pictures / videos / documents live together in this one post
+              if (attachments.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(16.dp))
+                if (item.contentBody.isNotBlank()) {
+                  Text(
+                    text = item.contentBody,
+                    fontSize = 15.sp,
+                    lineHeight = 24.sp,
+                    color = TextPrimary
+                  )
+                  Spacer(modifier = Modifier.height(16.dp))
+                }
+                AttachmentList(attachments = attachments)
+              }
             }
           }
         }
 
         // Integrated Document / Media Viewer
-        item {
-          DocumentViewerContainer(content = item)
+        if (attachments.isEmpty()) {
+          item {
+            DocumentViewerContainer(content = item)
+          }
         }
       }
     }

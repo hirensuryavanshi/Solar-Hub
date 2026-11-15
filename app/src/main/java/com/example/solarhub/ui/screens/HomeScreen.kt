@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -28,6 +29,7 @@ import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SolarPower
 import androidx.compose.material.icons.filled.WbSunny
@@ -87,6 +89,8 @@ import java.util.Locale
 fun HomeScreen(
   viewModel: SolarHubViewModel,
   onOpenAuthDialog: () -> Unit,
+  unreadCount: Int = 0,
+  onOpenNotifications: () -> Unit = {},
   modifier: Modifier = Modifier
 ) {
   val departments by viewModel.departments.collectAsState()
@@ -113,7 +117,9 @@ fun HomeScreen(
           searchQuery = searchQuery,
           onSearchQueryChange = { viewModel.setSearchQuery(it) },
           onOpenAuthDialog = onOpenAuthDialog,
-          onOpenAdminDashboard = { viewModel.navigateTo(Screen.AdminDashboard) }
+          onOpenAdminDashboard = { viewModel.navigateTo(Screen.AdminDashboard) },
+          unreadCount = unreadCount,
+          onOpenNotifications = onOpenNotifications
         )
       }
 
@@ -317,7 +323,9 @@ fun DarkNavyWelcomeSection(
   searchQuery: String,
   onSearchQueryChange: (String) -> Unit,
   onOpenAuthDialog: () -> Unit,
-  onOpenAdminDashboard: () -> Unit
+  onOpenAdminDashboard: () -> Unit,
+  unreadCount: Int = 0,
+  onOpenNotifications: () -> Unit = {}
 ) {
   Box(
     modifier = Modifier
@@ -423,6 +431,40 @@ fun DarkNavyWelcomeSection(
                 tint = Color.White,
                 modifier = Modifier.size(18.dp)
               )
+            }
+          }
+          Spacer(modifier = Modifier.width(8.dp))
+          Box(modifier = Modifier.size(36.dp)) {
+            IconButton(
+              onClick = onOpenNotifications,
+              modifier = Modifier
+                .size(36.dp)
+                .background(Color(0x33FFFFFF), CircleShape)
+                .testTag("notification_bell_button")
+            ) {
+              Icon(
+                imageVector = Icons.Default.Notifications,
+                contentDescription = "Notifications",
+                tint = Color.White,
+                modifier = Modifier.size(20.dp)
+              )
+            }
+            if (unreadCount > 0) {
+              Box(
+                modifier = Modifier
+                  .align(Alignment.TopEnd)
+                  .defaultMinSize(minWidth = 16.dp, minHeight = 16.dp)
+                  .background(Color(0xFFDC2626), CircleShape),
+                contentAlignment = Alignment.Center
+              ) {
+                Text(
+                  text = if (unreadCount > 9) "9+" else unreadCount.toString(),
+                  color = Color.White,
+                  fontSize = 9.sp,
+                  fontWeight = FontWeight.Bold,
+                  modifier = Modifier.padding(horizontal = 3.dp)
+                )
+              }
             }
           }
         }

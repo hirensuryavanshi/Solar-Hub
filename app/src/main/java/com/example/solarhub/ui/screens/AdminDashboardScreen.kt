@@ -187,6 +187,16 @@ fun AdminDashboardScreen(
         }
       }
 
+      // 1a. User data entry
+      item {
+        val users by viewModel.allUsers.collectAsState()
+        UsersEntryCard(
+          totalUsers = users.size,
+          blockedUsers = users.count { it.isBlocked },
+          onClick = { viewModel.navigateTo(Screen.AdminUsers) }
+        )
+      }
+
       // 1b. User requests entry
       item {
         val requests by viewModel.allRequests.collectAsState()
