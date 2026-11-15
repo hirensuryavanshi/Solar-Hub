@@ -41,15 +41,18 @@ interface SolarHubDao {
   fun getAllContentByDepartment(deptId: String): Flow<List<ContentItemEntity>>
 
   @Query("SELECT * FROM content_items WHERE isPublished = 1 ORDER BY publishedAt DESC LIMIT :limit")
-  fun getLatestPublishedContent(limit: Int = 10): Flow<List<ContentItemEntity>>
+  fun getLatestPublishedContent(limit: Int = 20): Flow<List<ContentItemEntity>>
+
+  @Query("SELECT * FROM content_items WHERE isPublished = 1 AND isAnnouncement = 1 ORDER BY publishedAt DESC LIMIT :limit")
+  fun getPublishedAnnouncements(limit: Int = 10): Flow<List<ContentItemEntity>>
 
   @Query("""
-    SELECT * FROM content_items 
+    SELECT * FROM content_items
     WHERE isPublished = 1 AND (
-      title LIKE '%' || :query || '%' OR 
-      description LIKE '%' || :query || '%' OR 
-      contentBody LIKE '%' || :query || '%' OR 
-      category LIKE '%' || :query || '%' OR 
+      title LIKE '%' || :query || '%' OR
+      description LIKE '%' || :query || '%' OR
+      contentBody LIKE '%' || :query || '%' OR
+      category LIKE '%' || :query || '%' OR
       subcategory LIKE '%' || :query || '%' OR
       attachmentName LIKE '%' || :query || '%'
     )
@@ -69,60 +72,43 @@ interface SolarHubDao {
   @Insert(onConflict = OnConflictStrategy.REPLACE)
   suspend fun insertContent(item: ContentItemEntity)
 
+  @Insert(onConflict = OnConflictStrategy.REPLACE)
+  suspend fun insertContentItems(items: List<ContentItemEntity>)
+
   @Update
   suspend fun updateContent(item: ContentItemEntity)
 
   @Query("DELETE FROM content_items WHERE id = :id")
   suspend fun deleteContent(id: String)
 
+  @Query("DELETE FROM content_items WHERE isPublished = 0")
+  suspend fun clearDrafts()
+
+  // --- USER REQUESTS (PRIVATE TO USER OR ADMIN) ---
   @Query("SELECT * FROM user_requests ORDER BY createdAt DESC")
   fun getAllRequests(): Flow<List<UserRequestEntity>>
+
+  @Query("SELECT * FROM user_requests WHERE userId = :userId ORDER BY createdAt DESC")
+  fun getRequestsByUser(userId: String): Flow<List<UserRequestEntity>>
+
+  @Query("SELECT * FROM user_requests WHERE isPendingSync = 1 ORDER BY createdAt ASC")
+  suspend fun getPendingSyncRequests(): List<UserRequestEntity>
 
   @Insert(onConflict = OnConflictStrategy.REPLACE)
   suspend fun insertRequest(request: UserRequestEntity)
 
-  @Query("UPDATE user_requests SET status = :status, adminReply = :reply, updatedAt = :now WHERE id = :id")
-  suspend fun updateRequest(id: String, status: String, reply: String, now: Long)
+  @Insert(onConflict = OnConflictStrategy.REPLACE)
+  suspend fun insertRequests(requests: List<UserRequestEntity>)
 
   @Query("DELETE FROM user_requests WHERE id = :id")
   suspend fun deleteRequest(id: String)
 
-  @Query("SELECT * FROM content_items WHERE id = :id LIMIT 1")
-  suspend fun getContentOnce(id: String): ContentItemEntity?
+  @Query("DELETE FROM user_requests WHERE userId != :userId AND isPendingSync = 0")
+  suspend fun clearRequestsNotOwnedBy(userId: String)
 
-  @Query("SELECT * FROM content_items WHERE isPublished = 1")
-  suspend fun getPublishedOnce(): List<ContentItemEntity>
+  @Query("DELETE FROM user_requests WHERE isPendingSync = 0")
+  suspend fun clearSyncedRequests()
 
-  @Query("SELECT * FROM user_requests WHERE id = :id LIMIT 1")
-  suspend fun getRequestOnce(id: String): UserRequestEntity?
-
-  @Insert(onConflict = OnConflictStrategy.REPLACE)
-  suspend fun insertRequests(requests: List<UserRequestEntity>)
-
-  @Query("DELETE FROM user_requests WHERE id NOT IN (:ids)")
-  suspend fun deleteRequestsNotIn(ids: List<String>)
-
-  @Insert(onConflict = OnConflictStrategy.REPLACE)
-  suspend fun insertUsers(users: List<AppUserEntity>)
-
-  @Query("DELETE FROM app_users WHERE mobile NOT IN (:mobiles)")
-  suspend fun deleteUsersNotIn(mobiles: List<String>)
-
-  @Query("SELECT * FROM app_users ORDER BY lastLoginAt DESC")
-  fun getAllUsers(): Flow<List<AppUserEntity>>
-
-  @Query("SELECT * FROM app_users WHERE mobile = :mobile LIMIT 1")
-  suspend fun getUser(mobile: String): AppUserEntity?
-
-  @Query("SELECT * FROM app_users WHERE mobile = :mobile LIMIT 1")
-  fun observeUser(mobile: String): Flow<AppUserEntity?>
-
-  @Insert(onConflict = OnConflictStrategy.REPLACE)
-  suspend fun upsertUser(user: AppUserEntity)
-
-  @Query("UPDATE app_users SET isBlocked = :blocked WHERE mobile = :mobile")
-  suspend fun setUserBlocked(mobile: String, blocked: Boolean)
-
-  @Query("DELETE FROM app_users WHERE mobile = :mobile")
-  suspend fun deleteUser(mobile: String)
+  @Query("UPDATE user_requests SET userId = :newUserId WHERE userId = :oldUserId")
+  suspend fun reassignUserIdForRequests(oldUserId: String, newUserId: String)
 }

@@ -1,6 +1,7 @@
 package com.example.solarhub.ui.screens
 
 import android.content.Context
+import android.content.Intent
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -25,8 +27,6 @@ import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Share
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -50,16 +50,14 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.FileProvider
 import com.example.solarhub.model.ContentItem
 import com.example.solarhub.model.UserRole
-import com.example.solarhub.ui.components.AttachmentList
-import com.example.solarhub.ui.components.AttachmentUtils
 import com.example.solarhub.ui.components.DocumentViewerContainer
 import com.example.solarhub.ui.components.IconHelper
 import com.example.solarhub.viewmodel.Screen
 import com.example.solarhub.viewmodel.SolarHubViewModel
 import com.example.ui.theme.BackgroundLightGrey
-import com.example.ui.theme.BorderLight
 import com.example.ui.theme.SolarBlue
 import com.example.ui.theme.SolarNavyDark
 import com.example.ui.theme.SurfaceCard
@@ -85,11 +83,42 @@ fun ContentDetailScreen(
   val context = LocalContext.current
   val contentItem by viewModel.getContentById(contentId).collectAsState(initial = null)
   val userRole by viewModel.userRole.collectAsState()
+  val session by viewModel.session.collectAsState()
+  val apiBaseUrl by viewModel.apiBaseUrl.collectAsState()
   val dateFormat = remember { SimpleDateFormat("MMMM dd, yyyy • hh:mm a", Locale.getDefault()) }
 
   val item = contentItem
 
+  val handleDownloadAndOpen: (ContentItem) -> Unit = { content ->
+    if (content.attachmentUrlOrPath != null || content.attachmentFileId != null) {
+      val safeName = (content.attachmentName ?: "${content.title}.${content.contentType.extensionHint}")
+        .replace(Regex("[^a-zA-Z0-9._-]"), "_")
+      val destDir = File(context.filesDir, "attachments")
+      val destFile = File(destDir, "${content.id}_$safeName")
+      if (destFile.exists() && destFile.length() > 0L) {
+        openLocalFile(context, destFile, content.attachmentMimeType ?: "*/*")
+      } else {
+        Toast.makeText(context, "Downloading ${content.attachmentName ?: "attachment"}...", Toast.LENGTH_SHORT).show()
+        viewModel.downloadAttachment(content, destFile) { res ->
+          res.onSuccess { file ->
+            openLocalFile(context, file, content.attachmentMimeType ?: "*/*")
+          }.onFailure { err ->
+            Toast.makeText(context, err.message ?: "Download failed", Toast.LENGTH_LONG).show()
+          }
+        }
+      }
+    } else {
+      val destDir = File(context.filesDir, "attachments")
+      destDir.mkdirs()
+      val safeName = "${content.id}_notes.txt"
+      val textFile = File(destDir, safeName)
+      textFile.writeText("${content.title}\n\n${content.description}\n\n${content.contentBody}")
+      openLocalFile(context, textFile, "text/plain")
+    }
+  }
+
   Scaffold(
+    modifier = modifier.navigationBarsPadding(),
     topBar = {
       TopAppBar(
         title = {
@@ -106,23 +135,27 @@ fun ContentDetailScreen(
             onClick = { viewModel.navigateBack() },
             modifier = Modifier.testTag("content_detail_back_button")
           ) {
-            Icon(
-              imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-              contentDescription = "Back",
-              tint = Color.White
-            )
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
           }
         },
         actions = {
           if (item != null) {
             IconButton(
-              onClick = { AttachmentUtils.share(context, item) },
+              onClick = {
+                val shareText = "${item.title}\n\n${item.description}\n\n${item.contentBody}"
+                val intent = Intent(Intent.ACTION_SEND).apply {
+                  type = "text/plain"
+                  putExtra(Intent.EXTRA_SUBJECT, item.title)
+                  putExtra(Intent.EXTRA_TEXT, shareText)
+                }
+                context.startActivity(Intent.createChooser(intent, "Share Knowledge Item"))
+              },
               modifier = Modifier.testTag("top_bar_share_button")
             ) {
               Icon(Icons.Default.Share, contentDescription = "Share", tint = Color.White)
             }
             IconButton(
-              onClick = { downloadFile(context, item) },
+              onClick = { handleDownloadAndOpen(item) },
               modifier = Modifier.testTag("top_bar_download_button")
             ) {
               Icon(Icons.Default.Download, contentDescription = "Download", tint = Color.White)
@@ -153,10 +186,6 @@ fun ContentDetailScreen(
       }
     } else {
       val typeColor = IconHelper.getContentTypeColor(item.contentType)
-      val attachments = remember(item.attachmentUrlOrPath, item.attachmentName, item.attachmentMimeType) {
-        AttachmentUtils.parse(item)
-      }
-
       LazyColumn(
         modifier = Modifier
           .fillMaxSize()
@@ -164,7 +193,6 @@ fun ContentDetailScreen(
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
       ) {
-        // Metadata Card
         item {
           Card(
             modifier = Modifier.fillMaxWidth().testTag("content_metadata_card"),
@@ -173,16 +201,12 @@ fun ContentDetailScreen(
             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
           ) {
             Column(modifier = Modifier.padding(20.dp)) {
-              // Type and Category badges
               Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
               ) {
-                Surface(
-                  shape = RoundedCornerShape(6.dp),
-                  color = typeColor.copy(alpha = 0.12f)
-                ) {
+                Surface(shape = RoundedCornerShape(6.dp), color = typeColor.copy(alpha = 0.12f)) {
                   Row(
                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically
@@ -194,20 +218,11 @@ fun ContentDetailScreen(
                       modifier = Modifier.size(14.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                      text = item.contentType.displayName,
-                      fontSize = 11.sp,
-                      fontWeight = FontWeight.Bold,
-                      color = typeColor
-                    )
+                    Text(item.contentType.displayName, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = typeColor)
                   }
                 }
-
                 if (item.category.isNotBlank()) {
-                  Surface(
-                    shape = RoundedCornerShape(6.dp),
-                    color = Color(0xFFEFF6FF)
-                  ) {
+                  Surface(shape = RoundedCornerShape(6.dp), color = Color(0xFFEFF6FF)) {
                     Text(
                       text = item.category.uppercase(),
                       fontSize = 11.sp,
@@ -220,32 +235,13 @@ fun ContentDetailScreen(
               }
 
               Spacer(modifier = Modifier.height(12.dp))
-
-              Text(
-                text = item.title,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.ExtraBold,
-                color = TextPrimary,
-                lineHeight = 26.sp
-              )
-
+              Text(item.title, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary, lineHeight = 26.sp)
               if (item.description.isNotBlank()) {
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                  text = item.description,
-                  fontSize = 14.sp,
-                  color = TextSecondary,
-                  lineHeight = 20.sp
-                )
+                Text(item.description, fontSize = 14.sp, color = TextSecondary, lineHeight = 20.sp)
               }
-
               Spacer(modifier = Modifier.height(14.dp))
-
-              // Author and Publication Date Info
-              Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-              ) {
+              Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
                   modifier = Modifier
                     .size(28.dp)
@@ -253,60 +249,40 @@ fun ContentDetailScreen(
                     .background(Color(0xFFE2E8F0)),
                   contentAlignment = Alignment.Center
                 ) {
-                  Icon(
-                    imageVector = Icons.Default.Person,
-                    contentDescription = null,
-                    tint = TextSecondary,
-                    modifier = Modifier.size(16.dp)
-                  )
+                  Icon(Icons.Default.Person, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(16.dp))
                 }
-
                 Spacer(modifier = Modifier.width(8.dp))
-
                 Column {
-                  Text(
-                    text = "Published by ${item.adminAuthor}",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = TextPrimary
-                  )
-                  Text(
-                    text = dateFormat.format(Date(item.publishedAt)),
-                    fontSize = 11.sp,
-                    color = TextMuted
-                  )
+                  Text("Published by ${item.adminAuthor}", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+                  Text(dateFormat.format(Date(item.publishedAt)), fontSize = 11.sp, color = TextMuted)
                 }
-              }
-
-              // Text and the attached pictures / videos / documents live together in this one post
-              if (attachments.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(16.dp))
-                if (item.contentBody.isNotBlank()) {
-                  Text(
-                    text = item.contentBody,
-                    fontSize = 15.sp,
-                    lineHeight = 24.sp,
-                    color = TextPrimary
-                  )
-                  Spacer(modifier = Modifier.height(16.dp))
-                }
-                AttachmentList(attachments = attachments)
               }
             }
           }
         }
 
-        // Integrated Document / Media Viewer
-        if (attachments.isEmpty()) {
-          item {
-            DocumentViewerContainer(content = item)
-          }
+        item {
+          DocumentViewerContainer(
+            content = item,
+            apiBaseUrl = apiBaseUrl,
+            authToken = session?.token.orEmpty(),
+            onDownload = { handleDownloadAndOpen(item) }
+          )
         }
       }
     }
   }
 }
 
-private fun downloadFile(context: Context, content: ContentItem) {
-  AttachmentUtils.download(context, content)
+private fun openLocalFile(context: Context, file: File, mimeType: String) {
+  try {
+    val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+    val intent = Intent(Intent.ACTION_VIEW).apply {
+      setDataAndType(uri, mimeType)
+      addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    }
+    context.startActivity(Intent.createChooser(intent, "Open ${file.name}"))
+  } catch (e: Exception) {
+    Toast.makeText(context, "Saved to ${file.name}", Toast.LENGTH_LONG).show()
+  }
 }

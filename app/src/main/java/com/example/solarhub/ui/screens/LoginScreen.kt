@@ -3,35 +3,49 @@ package com.example.solarhub.ui.screens
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AdminPanelSettings
+import androidx.compose.material.icons.filled.CloudDone
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -48,6 +62,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.theme.SolarBlue
@@ -58,15 +73,29 @@ import com.example.ui.theme.TextSecondary
 import kotlin.math.cos
 import kotlin.math.sin
 
-/** First screen: simple login with name and mobile number (no OTP). */
 @Composable
 fun LoginScreen(
-  onLogin: (name: String, mobile: String) -> Unit,
-  message: String? = null
+  defaultServerUrl: String,
+  isBusy: Boolean,
+  onTestConnection: (url: String, onResult: (Boolean, String) -> Unit) -> Unit,
+  onEmployeeLogin: (name: String, mobile: String, serverUrl: String?, onResult: (Boolean, String?) -> Unit) -> Unit,
+  onAdminLogin: (password: String, serverUrl: String?, onResult: (Boolean, String?) -> Unit) -> Unit
 ) {
+  var selectedTab by remember { mutableIntStateOf(0) } // 0: Employee, 1: Admin
   var name by remember { mutableStateOf("") }
   var mobile by remember { mutableStateOf("") }
-  var error by remember { mutableStateOf<String?>(null) }
+  var adminPassword by remember { mutableStateOf("") }
+  var serverUrl by remember { mutableStateOf(defaultServerUrl) }
+  var showServerConfig by remember { mutableStateOf(false) }
+  var errorMessage by remember { mutableStateOf<String?>(null) }
+  var isTestingServer by remember { mutableStateOf(false) }
+  var serverTestResult by remember { mutableStateOf<Pair<Boolean, String>?>(null) }
+
+  LaunchedEffect(defaultServerUrl) {
+    if (serverUrl.isBlank() && defaultServerUrl.isNotBlank()) {
+      serverUrl = defaultServerUrl
+    }
+  }
 
   Box(modifier = Modifier.fillMaxSize()) {
     SolarLoginBackground(modifier = Modifier.fillMaxSize())
@@ -75,13 +104,14 @@ fun LoginScreen(
       modifier = Modifier
         .fillMaxSize()
         .systemBarsPadding()
+        .navigationBarsPadding()
         .imePadding()
         .verticalScroll(rememberScrollState())
         .padding(horizontal = 24.dp),
       horizontalAlignment = Alignment.CenterHorizontally,
       verticalArrangement = Arrangement.Center
     ) {
-      Spacer(modifier = Modifier.height(24.dp))
+      Spacer(modifier = Modifier.height(20.dp))
 
       Box(
         modifier = Modifier
@@ -108,12 +138,14 @@ fun LoginScreen(
         color = Color.White
       )
       Text(
-        text = "Solar Manufacturing Knowledge",
-        fontSize = 13.sp,
+        text = "SOLAR MANUFACTURING KNOWLEDGE",
+        fontSize = 11.sp,
+        letterSpacing = 1.2.sp,
+        fontWeight = FontWeight.SemiBold,
         color = Color(0xFFBAE6FD)
       )
 
-      Spacer(modifier = Modifier.height(28.dp))
+      Spacer(modifier = Modifier.height(24.dp))
 
       Card(
         modifier = Modifier.fillMaxWidth(),
@@ -122,86 +154,205 @@ fun LoginScreen(
         elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
       ) {
         Column(modifier = Modifier.padding(20.dp)) {
-          Text(
-            text = "Login",
-            fontSize = 22.sp,
-            fontWeight = FontWeight.Bold,
-            color = TextPrimary
-          )
-          Spacer(modifier = Modifier.height(4.dp))
-          Text(
-            text = "Enter your name and mobile number to continue.",
-            fontSize = 13.sp,
-            color = TextSecondary
-          )
+          TabRow(
+            selectedTabIndex = selectedTab,
+            containerColor = Color(0xFFF1F5F9),
+            contentColor = SolarNavyDark,
+            modifier = Modifier.clip(RoundedCornerShape(10.dp))
+          ) {
+            Tab(
+              selected = selectedTab == 0,
+              onClick = {
+                selectedTab = 0
+                errorMessage = null
+              },
+              text = { Text("Employee", fontWeight = FontWeight.Bold) }
+            )
+            Tab(
+              selected = selectedTab == 1,
+              onClick = {
+                selectedTab = 1
+                errorMessage = null
+              },
+              text = { Text("Admin", fontWeight = FontWeight.Bold) }
+            )
+          }
 
           Spacer(modifier = Modifier.height(16.dp))
 
-          OutlinedTextField(
-            value = name,
-            onValueChange = {
-              name = it
-              error = null
-            },
-            label = { Text("Your Name") },
-            leadingIcon = { Icon(Icons.Default.Person, contentDescription = null, tint = SolarBlue) },
-            keyboardOptions = KeyboardOptions(
-              capitalization = KeyboardCapitalization.Words,
-              imeAction = ImeAction.Next
-            ),
-            singleLine = true,
-            modifier = Modifier
-              .fillMaxWidth()
-              .testTag("login_input_name")
-          )
+          if (selectedTab == 0) {
+            Text(
+              text = "Sign in with your Name & Mobile (No OTP)",
+              fontSize = 13.sp,
+              color = TextSecondary
+            )
+            Spacer(modifier = Modifier.height(12.dp))
 
-          Spacer(modifier = Modifier.height(12.dp))
+            OutlinedTextField(
+              value = name,
+              onValueChange = {
+                name = it
+                errorMessage = null
+              },
+              label = { Text("Full Name") },
+              leadingIcon = { Icon(Icons.Default.Person, contentDescription = null, tint = SolarBlue) },
+              keyboardOptions = KeyboardOptions(
+                capitalization = KeyboardCapitalization.Words,
+                imeAction = ImeAction.Next
+              ),
+              singleLine = true,
+              modifier = Modifier
+                .fillMaxWidth()
+                .testTag("login_input_name")
+            )
 
-          OutlinedTextField(
-            value = mobile,
-            onValueChange = { input ->
-              mobile = input.filter { it.isDigit() }.take(10)
-              error = null
-            },
-            label = { Text("Mobile Number") },
-            leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null, tint = SolarBlue) },
-            keyboardOptions = KeyboardOptions(
-              keyboardType = KeyboardType.Phone,
-              imeAction = ImeAction.Done
-            ),
-            singleLine = true,
-            modifier = Modifier
-              .fillMaxWidth()
-              .testTag("login_input_mobile")
-          )
+            Spacer(modifier = Modifier.height(12.dp))
 
-          if (message != null && error == null) {
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(text = message, color = Color(0xFFDC2626), fontSize = 12.sp)
+            OutlinedTextField(
+              value = mobile,
+              onValueChange = { input ->
+                mobile = input.filter { it.isDigit() }.take(10)
+                errorMessage = null
+              },
+              label = { Text("10-Digit Mobile Number") },
+              leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null, tint = SolarBlue) },
+              keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Phone,
+                imeAction = ImeAction.Done
+              ),
+              singleLine = true,
+              modifier = Modifier
+                .fillMaxWidth()
+                .testTag("login_input_mobile")
+            )
+          } else {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+              Icon(Icons.Default.AdminPanelSettings, contentDescription = null, tint = Color(0xFF16A34A), modifier = Modifier.size(18.dp))
+              Spacer(modifier = Modifier.width(6.dp))
+              Text(
+                text = "Verified securely by centralized server",
+                fontSize = 12.sp,
+                color = TextSecondary
+              )
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+
+            OutlinedTextField(
+              value = adminPassword,
+              onValueChange = {
+                adminPassword = it
+                errorMessage = null
+              },
+              label = { Text("Admin Password") },
+              leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = SolarNavyDark) },
+              visualTransformation = PasswordVisualTransformation(),
+              keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+              singleLine = true,
+              modifier = Modifier
+                .fillMaxWidth()
+                .testTag("login_input_admin_password")
+            )
           }
 
-          if (error != null) {
+          Spacer(modifier = Modifier.height(10.dp))
+
+          Row(
+            modifier = Modifier
+              .fillMaxWidth()
+              .clickable { showServerConfig = !showServerConfig }
+              .padding(vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+          ) {
+            Icon(Icons.Default.Settings, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(15.dp))
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+              text = if (showServerConfig) "Hide Server Connection Settings" else "Server Connection Settings",
+              fontSize = 12.sp,
+              color = SolarBlue,
+              fontWeight = FontWeight.SemiBold
+            )
+          }
+
+          if (showServerConfig) {
+            Spacer(modifier = Modifier.height(6.dp))
+            OutlinedTextField(
+              value = serverUrl,
+              onValueChange = {
+                serverUrl = it
+                serverTestResult = null
+              },
+              label = { Text("Backend Server URL") },
+              placeholder = { Text("https://your-solarhub-server.com") },
+              leadingIcon = { Icon(Icons.Default.CloudDone, contentDescription = null, tint = SolarBlue) },
+              singleLine = true,
+              modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedButton(
+              onClick = {
+                isTestingServer = true
+                serverTestResult = null
+                onTestConnection(serverUrl) { ok, msg ->
+                  isTestingServer = false
+                  serverTestResult = ok to msg
+                }
+              },
+              enabled = !isTestingServer && serverUrl.isNotBlank(),
+              shape = RoundedCornerShape(10.dp),
+              modifier = Modifier.fillMaxWidth()
+            ) {
+              if (isTestingServer) {
+                CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                Spacer(modifier = Modifier.width(8.dp))
+              }
+              Text(if (isTestingServer) "Testing..." else "Test Connection")
+            }
+            serverTestResult?.let { (ok, msg) ->
+              Spacer(modifier = Modifier.height(6.dp))
+              Text(
+                text = msg,
+                fontSize = 12.sp,
+                color = if (ok) Color(0xFF15803D) else Color(0xFFDC2626)
+              )
+            }
+          }
+
+          if (errorMessage != null) {
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-              text = error ?: "",
+              text = errorMessage ?: "",
               color = Color(0xFFDC2626),
               fontSize = 12.sp
             )
           }
 
-          Spacer(modifier = Modifier.height(18.dp))
+          Spacer(modifier = Modifier.height(16.dp))
 
           Button(
             onClick = {
-              val cleanName = name.trim()
-              if (cleanName.length < 2) {
-                error = "Please enter your name."
-              } else if (mobile.length != 10) {
-                error = "Please enter a 10 digit mobile number."
+              val urlOverride = serverUrl.trim().takeIf { it.isNotBlank() }
+              if (selectedTab == 0) {
+                val cleanName = name.trim()
+                if (cleanName.length < 2) {
+                  errorMessage = "Please enter your full name."
+                } else if (mobile.length < 10) {
+                  errorMessage = "Please enter a valid 10-digit mobile number."
+                } else {
+                  onEmployeeLogin(cleanName, mobile, urlOverride) { ok, err ->
+                    if (!ok) errorMessage = err
+                  }
+                }
               } else {
-                onLogin(cleanName, mobile)
+                if (adminPassword.isBlank()) {
+                  errorMessage = "Please enter the Admin password."
+                } else {
+                  onAdminLogin(adminPassword, urlOverride) { ok, err ->
+                    if (!ok) errorMessage = err
+                  }
+                }
               }
             },
+            enabled = !isBusy,
             colors = ButtonDefaults.buttonColors(containerColor = SolarNavyDark),
             shape = RoundedCornerShape(12.dp),
             modifier = Modifier
@@ -209,7 +360,19 @@ fun LoginScreen(
               .height(50.dp)
               .testTag("login_button")
           ) {
-            Text("Continue", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            if (isBusy) {
+              CircularProgressIndicator(
+                color = Color.White,
+                strokeWidth = 2.dp,
+                modifier = Modifier.size(20.dp)
+              )
+            } else {
+              Text(
+                text = if (selectedTab == 0) "Sign In to Solar Hub" else "Sign In as Admin",
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Bold
+              )
+            }
           }
         }
       }
@@ -221,14 +384,12 @@ fun LoginScreen(
 
 private fun mix(a: Float, b: Float, t: Float): Float = a + (b - a) * t
 
-/** Sky, sun and a field of solar panels, drawn with code (no image file needed). */
 @Composable
 private fun SolarLoginBackground(modifier: Modifier = Modifier) {
   Canvas(modifier = modifier) {
     val w = size.width
     val h = size.height
 
-    // Sky gradient: night blue at the top to sunrise orange near the horizon
     drawRect(
       brush = Brush.verticalGradient(
         colors = listOf(
@@ -242,7 +403,6 @@ private fun SolarLoginBackground(modifier: Modifier = Modifier) {
       )
     )
 
-    // Sun glow
     val sunCenter = Offset(w * 0.78f, h * 0.17f)
     drawCircle(
       brush = Brush.radialGradient(
@@ -255,7 +415,6 @@ private fun SolarLoginBackground(modifier: Modifier = Modifier) {
     )
     drawCircle(color = Color(0xFFFCD34D), radius = w * 0.085f, center = sunCenter)
 
-    // Sun rays
     for (i in 0 until 12) {
       val angle = Math.toRadians(i * 30.0)
       val start = Offset(
@@ -275,7 +434,6 @@ private fun SolarLoginBackground(modifier: Modifier = Modifier) {
       )
     }
 
-    // Solar panel field in perspective at the bottom
     val top = h * 0.74f
     val topLeft = w * 0.18f
     val topRight = w * 0.82f

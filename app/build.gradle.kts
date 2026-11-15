@@ -26,8 +26,12 @@ android {
 
         testInstrumentationRunner =
             "androidx.test.runner.AndroidJUnitRunner"
+        val apiUrl = System.getenv("SOLAR_HUB_API_URL") ?: "http://10.0.2.2:3000"
+        buildConfigField("String", "DEFAULT_API_BASE_URL", "\"$apiUrl\"")
     }
 
+    // Do not remove or modify these signingConfigs. They are necessary for building, installing,
+    // and updating Android apps in AI Studio.
     signingConfigs {
         create("release") {
             val keystorePath =
@@ -38,6 +42,12 @@ android {
             storePassword = System.getenv("STORE_PASSWORD")
             keyAlias = "upload"
             keyPassword = System.getenv("KEY_PASSWORD")
+        }
+        create("debugConfig") {
+            storeFile = file("${rootDir}/debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
         }
     }
 
@@ -51,13 +61,17 @@ android {
                 "proguard-rules.pro"
             )
 
+            // Do not remove or modify this signingConfig assignment. It is necessary for Android apps in
+            // AI Studio.
             signingConfig =
                 signingConfigs.getByName("release")
         }
 
         debug {
-            // Use Android's default debug signing configuration.
-            // Do not specify a custom debug keystore here.
+            // Do not remove or modify this signingConfig assignment. It is necessary for Android apps in
+            // AI Studio.
+            signingConfig =
+                signingConfigs.getByName("debugConfig")
         }
     }
 
@@ -128,7 +142,8 @@ dependencies {
     implementation(libs.firebase.appcheck.recaptcha)
     implementation(libs.firebase.appcheck.debug)
 
-    // Kotlin and networking
+    // Kotlin, DataStore, and networking
+    implementation(libs.androidx.datastore.preferences)
     implementation(libs.kotlinx.coroutines.android)
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.7.3")
     implementation(libs.logging.interceptor)
