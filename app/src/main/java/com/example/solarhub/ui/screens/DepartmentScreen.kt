@@ -24,8 +24,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FolderOff
@@ -558,7 +558,7 @@ fun DepartmentContentItemCard(
             )
             Spacer(modifier = Modifier.width(3.dp))
             Icon(
-              imageVector = Icons.Default.ArrowForward,
+              imageVector = Icons.AutoMirrored.Filled.ArrowForward,
               contentDescription = null,
               tint = SolarNavyDark,
               modifier = Modifier.size(11.dp)

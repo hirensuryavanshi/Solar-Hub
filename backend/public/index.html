@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SOLAR HUB — Solar Manufacturing Knowledge Platform</title>
+  <style>
+    :root {
+      --navy-dark: #0B192C;
+      --navy-mid: #1E3E62;
+      --solar-blue: #0284C7;
+      --solar-blue-light: #E0F2FE;
+      --solar-gold: #F59E0B;
+      --bg-grey: #F4F6F9;
+      --text-primary: #0F172A;
+      --text-secondary: #64748B;
+      --border: #E2E8F0;
+    }
+    * { box-sizing: border-box; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+    body { margin: 0; background: var(--bg-grey); color: var(--text-primary); }
+    .hero {
+      background: linear-gradient(180deg, var(--navy-dark), var(--navy-mid));
+      color: #fff;
+      padding: 28px 20px 32px;
+      border-bottom-left-radius: 24px;
+      border-bottom-right-radius: 24px;
+    }
+    .container { max-width: 1100px; margin: 0 auto; }
+    .topbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .logo { width: 42px; height: 42px; border-radius: 10px; background: var(--navy-mid); border: 1px solid #3B82F6; display: grid; place-items: center; font-weight: 800; color: var(--solar-gold); }
+    .pill { background: rgba(255,255,255,0.16); color: #fff; border: 0; padding: 8px 14px; border-radius: 20px; font-weight: 700; font-size: 12px; cursor: pointer; }
+    .pill.admin { background: #166534; }
+    .pill.live { background: rgba(74, 222, 128, 0.22); color: #BBF7D0; }
+    .pill.offline { background: rgba(252, 165, 165, 0.22); color: #FECACA; }
+    .search-input { width: 100%; padding: 14px 16px; border-radius: 12px; border: 0; font-size: 14px; margin-top: 18px; }
+    .section { padding: 24px 16px 0; max-width: 1100px; margin: 0 auto; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; margin-top: 12px; }
+    .card { background: #fff; border-radius: 16px; padding: 16px; box-shadow: 0 2px 8px rgba(15,23,42,0.06); }
+    .card.clickable { cursor: pointer; transition: transform 0.12s ease; }
+    .card.clickable:hover { transform: translateY(-1px); }
+    .dept-card { display: flex; align-items: center; gap: 12px; }
+    .dept-icon { width: 44px; height: 44px; border-radius: 50%; background: var(--solar-blue-light); color: var(--solar-blue); display: grid; place-items: center; font-weight: 700; flex-shrink: 0; }
+    .btn { background: var(--navy-dark); color: #fff; border: 0; border-radius: 10px; padding: 10px 16px; font-weight: 600; cursor: pointer; }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    .btn-blue { background: var(--solar-blue); }
+    .btn-outline { background: #fff; color: var(--navy-dark); border: 1px solid var(--border); }
+    .btn-danger { background: #fff; color: #DC2626; border: 1px solid #FECACA; }
+    .btn-sm { padding: 6px 10px; font-size: 12px; border-radius: 8px; }
+    input, textarea, select { width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); margin-top: 6px; font-size: 14px; background: #fff; }
+    .badge { display: inline-block; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; background: var(--solar-blue-light); color: var(--solar-blue); }
+    .badge-draft { background: #F1F5F9; color: #475569; }
+    .status-PENDING { background: #FEF3C7; color: #92400E; }
+    .status-ACCEPTED { background: #DBEAFE; color: #1E40AF; }
+    .status-COMPLETED { background: #DCFCE7; color: #166534; }
+    .status-REJECTED { background: #FEE2E2; color: #991B1B; }
+    .hidden { display: none !important; }
+    .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .space-between { justify-content: space-between; }
+    .muted { color: var(--text-secondary); font-size: 13px; }
+    .notice-banner {
+      max-width: 1100px;
+      margin: 14px auto 0;
+      padding: 12px 16px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 600;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+    .notice-error { background: #FEE2E2; color: #991B1B; border: 1px solid #FECACA; }
+    .notice-success { background: #DCFCE7; color: #166534; border: 1px solid #BBF7D0; }
+    .calc-tabs { display: flex; background: #F1F5F9; border-radius: 10px; padding: 4px; gap: 4px; margin: 12px 0; }
+    .calc-tab { flex: 1; border: 0; background: transparent; padding: 9px 12px; border-radius: 8px; font-weight: 600; font-size: 13px; color: var(--text-secondary); cursor: pointer; }
+    .calc-tab.active { background: #fff; color: var(--navy-dark); box-shadow: 0 1px 3px rgba(15,23,42,0.08); }
+    .calc-result { background: #F8FAFC; border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-top: 12px; }
+  </style>
+</head>
+<body>
+  <div id="login-view" class="section" style="padding-top: 48px; max-width: 460px;">
+    <div class="card" style="padding: 24px;">
+      <div class="brand" style="margin-bottom: 16px;">
+        <div class="logo">&#9728;</div>
+        <div>
+          <div style="font-weight: 800; font-size: 20px;">SOLAR HUB</div>
+          <div class="muted" style="font-size: 11px; font-weight: 700;">SOLAR MANUFACTURING KNOWLEDGE</div>
+        </div>
+      </div>
+      <div class="row" style="margin-bottom: 16px;">
+        <button class="btn" id="tab-emp-btn" onclick="switchLoginTab('EMPLOYEE')">Employee Login</button>
+        <button class="btn btn-outline" id="tab-adm-btn" onclick="switchLoginTab('ADMIN')">Admin Login</button>
+      </div>
+      <div id="emp-login-form">
+        <label>Full Name</label>
+        <input id="login-name" placeholder="Enter your full name" />
+        <label style="display:block; margin-top: 10px;">Mobile Number (No OTP)</label>
+        <input id="login-mobile" placeholder="Enter 10-digit mobile number" />
+        <button class="btn btn-blue" style="width: 100%; margin-top: 16px;" onclick="loginEmployee()">Continue to Solar Hub</button>
+      </div>
+      <div id="adm-login-form" class="hidden">
+        <label>Admin Password</label>
+        <input id="login-admin-pass" type="password" placeholder="Verified securely on backend" />
+        <button class="btn" style="width: 100%; margin-top: 16px;" onclick="loginAdmin()">Sign In as Admin</button>
+      </div>
+      <div id="login-error" style="color: #DC2626; font-size: 13px; margin-top: 10px;"></div>
+    </div>
+  </div>
+
+  <div id="app-view" class="hidden">
+    <div class="hero">
+      <div class="container">
+        <div class="topbar">
+          <div class="brand">
+            <div class="logo">&#9728;</div>
+            <div>
+              <div style="font-weight: 800; font-size: 20px;">SOLAR HUB</div>
+              <div style="font-size: 10px; letter-spacing: 1px; color: #93C5FD; font-weight: 700;">SOLAR MANUFACTURING KNOWLEDGE</div>
+            </div>
+          </div>
+          <div class="row">
+            <button id="ws-status" class="pill" onclick="manualSync()" title="Click to sync now">Connecting...</button>
+            <span id="user-badge" class="pill">User</span>
+            <button id="admin-panel-btn" class="pill admin hidden" onclick="toggleAdminPanel()">Admin Panel</button>
+            <button class="pill" onclick="logout()">Logout</button>
+          </div>
+        </div>
+        <h2 style="margin: 20px 0 6px;">Welcome to Solar Hub</h2>
+        <div style="color: #CBD5E1; font-size: 14px;">Your central platform for solar manufacturing knowledge and information sharing.</div>
+        <input id="search-box" class="search-input" placeholder="Search departments, published info, documents..." oninput="renderAll()" />
+      </div>
+    </div>
+
+    <div id="notice-banner" class="notice-banner hidden">
+      <span id="notice-text"></span>
+      <button class="btn btn-outline btn-sm" onclick="clearNotice()">Dismiss</button>
+    </div>
+
+    <div id="admin-panel" class="section hidden">
+      <div class="card">
+        <div class="row space-between">
+          <h3 style="margin: 0;">Admin Control Center (Real-Time)</h3>
+          <button class="btn btn-outline" onclick="toggleAdminPanel()">Close</button>
+        </div>
+        <hr style="border: 0; border-top: 1px solid var(--border); margin: 14px 0;" />
+
+        <h4>Publish Content / Announcement</h4>
+        <div class="row">
+          <select id="adm-dept" style="flex:1;"></select>
+          <select id="adm-type" style="flex:1;">
+            <option value="TEXT">Text Information</option>
+            <option value="NOTICE">Notice & Announcement</option>
+            <option value="PDF">PDF Document</option>
+            <option value="IMAGE">Image / Photograph</option>
+            <option value="VIDEO">Video Recording</option>
+            <option value="WORD">Word Document</option>
+            <option value="EXCEL">Excel Spreadsheet</option>
+            <option value="PPT">PowerPoint Presentation</option>
+          </select>
+        </div>
+        <input id="adm-title" placeholder="Content Title *" />
+        <div class="row">
+          <input id="adm-category" placeholder="Category (optional)" style="flex:1;" />
+          <input id="adm-subcategory" placeholder="Subcategory (optional)" style="flex:1;" />
+        </div>
+        <textarea id="adm-desc" placeholder="Short description"></textarea>
+        <textarea id="adm-body" rows="4" placeholder="Detailed information..."></textarea>
+        <div style="margin-top: 10px;">
+          <label>Attach File (PDF / Image / Video / Doc):</label>
+          <input id="adm-file" type="file" />
+        </div>
+        <div class="row" style="margin-top: 10px;">
+          <label style="display:flex; align-items:center; gap:8px;">
+            <input id="adm-announcement" type="checkbox" style="width:auto; margin:0;" /> Mark as Important Announcement
+          </label>
+          <label style="display:flex; align-items:center; gap:8px;">
+            <input id="adm-published" type="checkbox" checked style="width:auto; margin:0;" /> Publish Live Immediately
+          </label>
+        </div>
+        <button id="adm-publish-btn" class="btn btn-blue" style="margin-top: 12px;" onclick="publishContent()">Publish Content</button>
+
+        <hr style="border: 0; border-top: 1px solid var(--border); margin: 20px 0;" />
+        <h4>Manage Departments</h4>
+        <div class="row">
+          <input id="new-dept-name" placeholder="New department name (e.g. Logistics)" style="flex:2; margin-top:0;" />
+          <button class="btn" onclick="addDepartment()">Add Department</button>
+        </div>
+        <div id="admin-departments-list" style="margin-top: 12px;"></div>
+
+        <hr style="border: 0; border-top: 1px solid var(--border); margin: 20px 0;" />
+        <h4>Incoming User Requests (Real-Time)</h4>
+        <div id="admin-requests-list"></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>Explore Departments</h3>
+      <div id="dept-grid" class="grid"></div>
+      <div id="dept-detail" class="card hidden" style="margin-top: 16px;"></div>
+    </div>
+
+    <div class="section">
+      <h3>Quick Access: Solar Calculator</h3>
+      <div class="card" style="margin-top: 12px;">
+        <div class="row space-between">
+          <div>
+            <strong>Solar Capacity &amp; Module Quantity Calculator</strong>
+            <div class="muted">Quick manufacturing capacity sizing</div>
+          </div>
+          <span class="badge" style="background:#FEF3C7; color:#92400E;">Formula Tool</span>
+        </div>
+        <div class="calc-tabs">
+          <button id="calc-tab-mw" class="calc-tab active" onclick="setCalcMode('MW_TO_QTY')">MW &#8594; Module Quantity</button>
+          <button id="calc-tab-qty" class="calc-tab" onclick="setCalcMode('QTY_TO_MW')">Quantity &#8594; MW</button>
+        </div>
+        <div class="row">
+          <div id="calc-mw-wrap" style="flex:1; min-width: 200px;">
+            <label class="muted">Plant Capacity (MW)</label>
+            <input id="calc-mw" type="number" step="any" value="10" oninput="recalcSolar()" placeholder="e.g. 10.0" />
+          </div>
+          <div id="calc-qty-wrap" class="hidden" style="flex:1; min-width: 200px;">
+            <label class="muted">Module Quantity (Pcs)</label>
+            <input id="calc-qty" type="number" step="1" value="18182" oninput="recalcSolar()" placeholder="e.g. 18182" />
+          </div>
+          <div style="flex:1; min-width: 200px;">
+            <label class="muted">Module Rating (Watt / Wp)</label>
+            <input id="calc-watt" type="number" step="any" value="550" oninput="recalcSolar()" placeholder="e.g. 550" />
+          </div>
+        </div>
+        <div class="calc-result">
+          <div id="calc-result-label" class="muted">Required Module Quantity:</div>
+          <div id="calc-result-value" style="font-size: 22px; font-weight: 800; color: var(--solar-blue); margin: 4px 0;">18,182 Modules</div>
+          <div id="calc-result-formula" class="muted" style="font-size: 11px;">Formula: (MW &#215; 1,000,000) / Module Watt</div>
+        </div>
+        <div class="row" style="margin-top: 12px;">
+          <button class="btn btn-outline btn-sm" onclick="clearSolarCalc()">Clear</button>
+          <button class="btn btn-outline btn-sm" onclick="resetSolarCalc()">Reset (10 MW / 550 Wp)</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>Latest Updates &amp; Announcements</h3>
+      <div id="updates-list" style="display: grid; gap: 10px; margin-top: 12px;"></div>
+    </div>
+
+    <div class="section" style="padding-bottom: 40px;">
+      <h3>Submit Request &amp; My Request History</h3>
+      <div class="card" style="margin-top: 12px;">
+        <div class="row">
+          <select id="req-dept" style="flex:1;"></select>
+          <input id="req-title" placeholder="Request Subject" style="flex:2;" />
+        </div>
+        <textarea id="req-details" rows="3" placeholder="Enter your request details..."></textarea>
+        <button id="req-submit-btn" class="btn btn-blue" style="margin-top: 10px;" onclick="submitUserRequest()">Submit Request</button>
+        <div id="my-requests-list" style="margin-top: 16px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const SESSION_KEY = 'solarhub_session_v1';
+    let calcMode = 'MW_TO_QTY';
+    let state = {
+      token: null,
+      user: null,
+      departments: [],
+      contentItems: [],
+      requests: [],
+      selectedDeptId: null,
+      lastSync: 0,
+      ws: null,
+      reconnectTimer: null,
+    };
+
+    function showNotice(msg, isError = false) {
+      const box = document.getElementById('notice-banner');
+      const text = document.getElementById('notice-text');
+      box.className = 'notice-banner ' + (isError ? 'notice-error' : 'notice-success');
+      text.textContent = msg;
+    }
+
+    function clearNotice() {
+      document.getElementById('notice-banner').className = 'notice-banner hidden';
+    }
+
+    function switchLoginTab(role) {
+      document.getElementById('emp-login-form').classList.toggle('hidden', role !== 'EMPLOYEE');
+      document.getElementById('adm-login-form').classList.toggle('hidden', role !== 'ADMIN');
+      document.getElementById('tab-emp-btn').className = role === 'EMPLOYEE' ? 'btn' : 'btn btn-outline';
+      document.getElementById('tab-adm-btn').className = role === 'ADMIN' ? 'btn' : 'btn btn-outline';
+      document.getElementById('login-error').textContent = '';
+    }
+
+    async function api(path, opts = {}) {
+      const headers = { ...(opts.headers || {}) };
+      if (state.token) headers['Authorization'] = 'Bearer ' + state.token;
+      if (!(opts.body instanceof FormData) && opts.body && !headers['Content-Type']) {
+        headers['Content-Type'] = 'application/json';
+      }
+      const res = await fetch(path, { ...opts, headers });
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 401 && state.token) {
+        logout();
+        throw new Error(data.error || 'Session expired. Please sign in again.');
+      }
+      if (!res.ok) throw new Error(data.error || 'Request failed');
+      return data;
+    }
+
+    async function loginEmployee() {
+      try {
+        document.getElementById('login-error').textContent = '';
+        const name = document.getElementById('login-name').value.trim();
+        const mobile = document.getElementById('login-mobile').value.trim();
+        const data = await api('/api/auth/login', { method: 'POST', body: JSON.stringify({ name, mobile }) });
+        await onAuthenticated(data);
+      } catch (e) {
+        document.getElementById('login-error').textContent = e.message;
+      }
+    }
+
+    async function loginAdmin() {
+      try {
+        document.getElementById('login-error').textContent = '';
+        const password = document.getElementById('login-admin-pass').value;
+        const data = await api('/api/auth/admin/login', { method: 'POST', body: JSON.stringify({ password }) });
+        await onAuthenticated(data);
+      } catch (e) {
+        document.getElementById('login-error').textContent = e.message;
+      }
+    }
+
+    async function onAuthenticated(data) {
+      state.token = data.token;
+      state.user = data.user;
+      try {
+        sessionStorage.setItem(SESSION_KEY, JSON.stringify({ token: data.token, user: data.user }));
+      } catch (_) {}
+      document.getElementById('login-view').classList.add('hidden');
+      document.getElementById('app-view').classList.remove('hidden');
+      document.getElementById('user-badge').textContent = `${data.user.name} (${data.user.role})`;
+      document.getElementById('admin-panel-btn').classList.toggle('hidden', data.user.role !== 'ADMIN');
+      recalcSolar();
+      await syncNow(0);
+      connectWebSocket();
+    }
+
+    function logout() {
+      if (state.reconnectTimer) clearTimeout(state.reconnectTimer);
+      if (state.ws) {
+        state.ws.onclose = null;
+        state.ws.close();
+      }
+      try { sessionStorage.removeItem(SESSION_KEY); } catch (_) {}
+      state = {
+        token: null, user: null, departments: [], contentItems: [], requests: [],
+        selectedDeptId: null, lastSync: 0, ws: null, reconnectTimer: null
+      };
+      document.getElementById('admin-panel').classList.add('hidden');
+      document.getElementById('app-view').classList.add('hidden');
+      document.getElementById('login-view').classList.remove('hidden');
+      clearNotice();
+    }
+
+    async function manualSync() {
+      try {
+        await syncNow(state.lastSync);
+        showNotice('Synchronized with centralized database.');
+      } catch (e) {
+        showNotice(e.message || 'Sync failed', true);
+      }
+    }
+
+    async function syncNow(since) {
+      const s = since !== undefined ? since : state.lastSync;
+      const data = await api(`/api/sync?since=${s}`);
+      if (data.fullSync) {
+        state.departments = data.departments;
+        state.contentItems = data.contentItems;
+        state.requests = data.requests;
+      } else {
+        for (const d of data.departments) upsertById(state.departments, d);
+        for (const c of data.contentItems) upsertById(state.contentItems, c);
+        for (const r of data.requests) upsertById(state.requests, r);
+        state.departments = state.departments.filter(d => !data.deletedDepartments.includes(d.id));
+        state.contentItems = state.contentItems.filter(c => !data.deletedContent.includes(c.id));
+        state.requests = state.requests.filter(r => !data.deletedRequests.includes(r.id));
+      }
+      state.lastSync = data.serverTime;
+      renderAll();
+    }
+
+    function upsertById(arr, item) {
+      const i = arr.findIndex(x => x.id === item.id);
+      if (i >= 0) arr[i] = item; else arr.unshift(item);
+    }
+
+    function connectWebSocket() {
+      if (!state.token) return;
+      if (state.ws && (state.ws.readyState === WebSocket.OPEN || state.ws.readyState === WebSocket.CONNECTING)) return;
+      const statusBtn = document.getElementById('ws-status');
+      const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const ws = new WebSocket(`${proto}//${location.host}/ws?token=${encodeURIComponent(state.token)}`);
+      state.ws = ws;
+      ws.onopen = () => {
+        statusBtn.textContent = 'Live Sync';
+        statusBtn.className = 'pill live';
+        syncNow(state.lastSync).catch(() => {});
+      };
+      ws.onmessage = (ev) => {
+        const msg = JSON.parse(ev.data);
+        if (msg.type === 'DEPARTMENT_UPDATED') upsertById(state.departments, msg.data);
+        if (msg.type === 'DEPARTMENT_DELETED') {
+          state.departments = state.departments.filter(d => d.id !== msg.data.id);
+          if (state.selectedDeptId === msg.data.id) state.selectedDeptId = null;
+        }
+        if (msg.type === 'CONTENT_UPDATED') {
+          if (msg.data.isPublished || (state.user && state.user.role === 'ADMIN')) {
+            upsertById(state.contentItems, msg.data);
+          }
+        }
+        if (msg.type === 'CONTENT_DELETED' || (msg.type === 'CONTENT_UNPUBLISHED' && state.user?.role !== 'ADMIN')) {
+          state.contentItems = state.contentItems.filter(c => c.id !== msg.data.id);
+        }
+        if (msg.type === 'REQUEST_CREATED' || msg.type === 'REQUEST_UPDATED') upsertById(state.requests, msg.data);
+        if (msg.type === 'REQUEST_DELETED') state.requests = state.requests.filter(r => r.id !== msg.data.id);
+        state.lastSync = msg.serverTime || Date.now();
+        renderAll();
+      };
+      ws.onclose = () => {
+        statusBtn.textContent = 'Reconnecting...';
+        statusBtn.className = 'pill offline';
+        if (state.token) {
+          state.reconnectTimer = setTimeout(connectWebSocket, 2000);
+        }
+      };
+    }
+
+    function toggleAdminPanel() {
+      document.getElementById('admin-panel').classList.toggle('hidden');
+    }
+
+    async function publishContent() {
+      const btn = document.getElementById('adm-publish-btn');
+      btn.disabled = true;
+      try {
+        clearNotice();
+        const deptId = document.getElementById('adm-dept').value;
+        const type = document.getElementById('adm-type').value;
+        const title = document.getElementById('adm-title').value.trim();
+        const category = document.getElementById('adm-category').value.trim();
+        const subcategory = document.getElementById('adm-subcategory').value.trim();
+        const description = document.getElementById('adm-desc').value.trim();
+        const contentBody = document.getElementById('adm-body').value.trim();
+        const isAnnouncement = document.getElementById('adm-announcement').checked;
+        const isPublished = document.getElementById('adm-published').checked;
+        const fileInput = document.getElementById('adm-file');
+        let fileMeta = {};
+        if (fileInput.files[0]) {
+          const fd = new FormData();
+          fd.append('file', fileInput.files[0]);
+          const up = await api('/api/files/upload', { method: 'POST', body: fd });
+          fileMeta = {
+            attachmentFileId: up.file.id,
+            attachmentName: up.file.originalName,
+            attachmentUrlOrPath: up.file.url,
+            attachmentSizeBytes: up.file.sizeBytes,
+            attachmentMimeType: up.file.mimeType,
+          };
+        }
+        await api('/api/content', {
+          method: 'POST',
+          body: JSON.stringify({
+            departmentId: deptId,
+            contentType: type,
+            title,
+            category,
+            subcategory,
+            description,
+            contentBody,
+            isAnnouncement,
+            isPublished,
+            ...fileMeta,
+          }),
+        });
+        document.getElementById('adm-title').value = '';
+        document.getElementById('adm-category').value = '';
+        document.getElementById('adm-subcategory').value = '';
+        document.getElementById('adm-desc').value = '';
+        document.getElementById('adm-body').value = '';
+        document.getElementById('adm-announcement').checked = false;
+        fileInput.value = '';
+        await syncNow(state.lastSync);
+        showNotice(isPublished ? 'Content published live to all users.' : 'Content saved as draft.');
+      } catch (e) {
+        showNotice(e.message || 'Failed to publish content.', true);
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    async function togglePublishContent(id, targetState) {
+      try {
+        await api(`/api/content/${encodeURIComponent(id)}/publish`, {
+          method: 'PATCH',
+          body: JSON.stringify({ isPublished: targetState }),
+        });
+        await syncNow(state.lastSync);
+        showNotice(targetState ? 'Content published to all users.' : 'Content moved to draft.');
+      } catch (e) {
+        showNotice(e.message || 'Failed to update publish status.', true);
+      }
+    }
+
+    async function deleteContentItem(id) {
+      if (!confirm('Delete this published item permanently?')) return;
+      try {
+        await api(`/api/content/${encodeURIComponent(id)}`, { method: 'DELETE' });
+        await syncNow(state.lastSync);
+        showNotice('Content deleted.');
+      } catch (e) {
+        showNotice(e.message || 'Failed to delete content.', true);
+      }
+    }
+
+    async function addDepartment() {
+      try {
+        const input = document.getElementById('new-dept-name');
+        const name = input.value.trim();
+        if (!name) {
+          showNotice('Please enter a department name.', true);
+          return;
+        }
+        await api('/api/departments', {
+          method: 'POST',
+          body: JSON.stringify({ name, iconKey: 'factory' }),
+        });
+        input.value = '';
+        await syncNow(state.lastSync);
+        showNotice(`Department "${name}" added.`);
+      } catch (e) {
+        showNotice(e.message || 'Failed to add department.', true);
+      }
+    }
+
+    async function deleteDepartment(id, name) {
+      if (!confirm(`Delete department "${name}" and all its content?`)) return;
+      try {
+        await api(`/api/departments/${encodeURIComponent(id)}`, { method: 'DELETE' });
+        await syncNow(state.lastSync);
+        showNotice(`Department "${name}" deleted.`);
+      } catch (e) {
+        showNotice(e.message || 'Failed to delete department.', true);
+      }
+    }
+
+    async function submitUserRequest() {
+      const btn = document.getElementById('req-submit-btn');
+      btn.disabled = true;
+      try {
+        clearNotice();
+        const departmentId = document.getElementById('req-dept').value;
+        const dept = state.departments.find(d => d.id === departmentId);
+        const title = document.getElementById('req-title').value.trim();
+        const details = document.getElementById('req-details').value.trim();
+        const clientRequestId = crypto.randomUUID ? crypto.randomUUID() : ('req_' + Date.now() + '_' + Math.random().toString(36).slice(2));
+        await api('/api/requests', {
+          method: 'POST',
+          body: JSON.stringify({ clientRequestId, departmentId, departmentName: dept ? dept.name : '', title, details }),
+        });
+        document.getElementById('req-title').value = '';
+        document.getElementById('req-details').value = '';
+        await syncNow(state.lastSync);
+        showNotice('Request submitted live.');
+      } catch (e) {
+        showNotice(e.message || 'Failed to submit request.', true);
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    async function updateReq(id, status) {
+      try {
+        const reply = prompt('Enter reply message for user (optional):', '');
+        if (reply === null) return;
+        await api(`/api/requests/${encodeURIComponent(id)}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ status, adminReply: reply }),
+        });
+        await syncNow(state.lastSync);
+        showNotice(`Request marked ${status}.`);
+      } catch (e) {
+        showNotice(e.message || 'Failed to update request.', true);
+      }
+    }
+
+    async function deleteReq(id) {
+      if (!confirm('Delete this request permanently?')) return;
+      try {
+        await api(`/api/requests/${encodeURIComponent(id)}`, { method: 'DELETE' });
+        await syncNow(state.lastSync);
+        showNotice('Request deleted.');
+      } catch (e) {
+        showNotice(e.message || 'Failed to delete request.', true);
+      }
+    }
+
+    function openDept(id) {
+      state.selectedDeptId = id;
+      renderAll();
+    }
+
+    async function downloadAttachment(fileUrl, fileName) {
+      try {
+        const res = await fetch(fileUrl, { headers: { Authorization: 'Bearer ' + state.token } });
+        if (!res.ok) throw new Error('Attachment download failed.');
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName || 'attachment';
+        a.click();
+        URL.revokeObjectURL(url);
+      } catch (e) {
+        showNotice(e.message || 'Could not download attachment.', true);
+      }
+    }
+
+    // --- SOLAR CALCULATOR (Matches Android SolarCalculator.kt) ---
+    function setCalcMode(mode) {
+      calcMode = mode;
+      document.getElementById('calc-tab-mw').classList.toggle('active', mode === 'MW_TO_QTY');
+      document.getElementById('calc-tab-qty').classList.toggle('active', mode === 'QTY_TO_MW');
+      document.getElementById('calc-mw-wrap').classList.toggle('hidden', mode !== 'MW_TO_QTY');
+      document.getElementById('calc-qty-wrap').classList.toggle('hidden', mode !== 'QTY_TO_MW');
+      recalcSolar();
+    }
+
+    function recalcSolar() {
+      const watt = parseFloat(document.getElementById('calc-watt').value);
+      const labelEl = document.getElementById('calc-result-label');
+      const valueEl = document.getElementById('calc-result-value');
+      const formulaEl = document.getElementById('calc-result-formula');
+
+      labelEl.textContent = calcMode === 'MW_TO_QTY' ? 'Required Module Quantity:' : 'Total Plant Output:';
+      formulaEl.innerHTML = calcMode === 'MW_TO_QTY'
+        ? 'Formula: (MW &#215; 1,000,000) / Module Watt'
+        : 'Formula: (Module Quantity &#215; Module Watt) / 1,000,000';
+
+      if (!Number.isFinite(watt) || watt <= 0) {
+        valueEl.textContent = 'Enter valid Module Watt (Wp)';
+        return;
+      }
+      if (calcMode === 'MW_TO_QTY') {
+        const mw = parseFloat(document.getElementById('calc-mw').value);
+        if (Number.isFinite(mw) && mw > 0) {
+          const qty = Math.round((mw * 1000000) / watt);
+          valueEl.textContent = `${qty.toLocaleString()} Modules`;
+        } else {
+          valueEl.textContent = '—';
+        }
+      } else {
+        const qty = parseFloat(document.getElementById('calc-qty').value);
+        if (Number.isFinite(qty) && qty > 0) {
+          const mw = (qty * watt) / 1000000;
+          valueEl.textContent = `${mw.toLocaleString(undefined, { maximumFractionDigits: 2 })} MW`;
+        } else {
+          valueEl.textContent = '—';
+        }
+      }
+    }
+
+    function clearSolarCalc() {
+      document.getElementById('calc-mw').value = '';
+      document.getElementById('calc-qty').value = '';
+      recalcSolar();
+    }
+
+    function resetSolarCalc() {
+      setCalcMode('MW_TO_QTY');
+      document.getElementById('calc-mw').value = '10';
+      document.getElementById('calc-qty').value = '18182';
+      document.getElementById('calc-watt').value = '550';
+      recalcSolar();
+    }
+
+    function esc(str) {
+      return String(str ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function renderAll() {
+      if (!state.user) return;
+      const q = (document.getElementById('search-box').value || '').toLowerCase();
+      const sortedDepts = [...state.departments].sort((a, b) => (a.orderIndex || 0) - (b.orderIndex || 0));
+      const prevAdmDept = document.getElementById('adm-dept').value;
+      const prevReqDept = document.getElementById('req-dept').value;
+      const deptOptions = sortedDepts.map(d => `<option value="${esc(d.id)}">${esc(d.name)}</option>`).join('');
+      document.getElementById('adm-dept').innerHTML = deptOptions;
+      document.getElementById('req-dept').innerHTML = deptOptions;
+      if (prevAdmDept && sortedDepts.some(d => d.id === prevAdmDept)) document.getElementById('adm-dept').value = prevAdmDept;
+      if (prevReqDept && sortedDepts.some(d => d.id === prevReqDept)) document.getElementById('req-dept').value = prevReqDept;
+
+      const filteredDepts = q
+        ? sortedDepts.filter(d => d.name.toLowerCase().includes(q))
+        : sortedDepts;
+
+      document.getElementById('dept-grid').innerHTML = filteredDepts.map(d => `
+        <div class="card clickable dept-card" onclick="openDept('${esc(d.id)}')">
+          <div class="dept-icon">${esc(d.name.slice(0,2).toUpperCase())}</div>
+          <div style="font-weight:700;">${esc(d.name)}</div>
+        </div>
+      `).join('');
+
+      const deptBox = document.getElementById('dept-detail');
+      if (state.selectedDeptId) {
+        const dept = state.departments.find(d => d.id === state.selectedDeptId);
+        const items = state.contentItems
+          .filter(c => c.departmentId === state.selectedDeptId && (state.user.role === 'ADMIN' || c.isPublished))
+          .sort((a, b) => (b.publishedAt || 0) - (a.publishedAt || 0));
+        deptBox.classList.remove('hidden');
+        deptBox.innerHTML = `<div class="row space-between"><h3 style="margin:0;">${esc(dept ? dept.name : '')}</h3><button class="btn btn-outline" onclick="openDept(null)">Close</button></div>` +
+          (items.length ? items.map(renderContentCard).join('') : '<p class="muted">No information available yet.</p>');
+      } else {
+        deptBox.classList.add('hidden');
+      }
+
+      const published = state.contentItems
+        .filter(c => {
+          const visible = state.user.role === 'ADMIN' || c.isPublished;
+          if (!visible) return false;
+          if (!q) return true;
+          const deptName = (state.departments.find(d => d.id === c.departmentId)?.name || '').toLowerCase();
+          return (c.title || '').toLowerCase().includes(q)
+            || (c.description || '').toLowerCase().includes(q)
+            || (c.contentBody || '').toLowerCase().includes(q)
+            || deptName.includes(q);
+        })
+        .sort((a, b) => (b.publishedAt || 0) - (a.publishedAt || 0));
+      document.getElementById('updates-list').innerHTML = published.length
+        ? published.map(renderContentCard).join('')
+        : '<div class="card muted">No latest updates available.</div>';
+
+      const myReqs = state.requests
+        .filter(r => r.userId === state.user.id)
+        .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+      document.getElementById('my-requests-list').innerHTML = myReqs.length
+        ? myReqs.map(r => `
+          <div style="border-top:1px solid var(--border); padding:10px 0;">
+            <div class="row space-between">
+              <strong>${esc(r.title)}</strong>
+              <span class="badge status-${esc(r.status)}">${esc(r.status)}</span>
+            </div>
+            <div class="muted">${esc(r.details)}</div>
+            ${r.adminReply ? `<div style="margin-top:4px; color:#0369A1; font-size:13px;"><strong>Admin Reply:</strong> ${esc(r.adminReply)}</div>` : ''}
+          </div>
+        `).join('')
+        : '<p class="muted">No requests submitted yet.</p>';
+
+      if (state.user.role === 'ADMIN') {
+        document.getElementById('admin-departments-list').innerHTML = sortedDepts.map(d => `
+          <div class="row space-between" style="border-top:1px solid var(--border); padding:8px 0;">
+            <span><strong>${esc(d.name)}</strong></span>
+            <button class="btn btn-danger btn-sm" onclick="deleteDepartment('${esc(d.id)}','${esc(d.name)}')">Delete</button>
+          </div>
+        `).join('');
+
+        const sortedReqs = [...state.requests].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+        document.getElementById('admin-requests-list').innerHTML = sortedReqs.length
+          ? sortedReqs.map(r => `
+            <div style="border-top:1px solid var(--border); padding:12px 0;">
+              <div class="row space-between">
+                <div><strong>${esc(r.userName)}</strong> (${esc(r.userMobile)}) • ${esc(new Date(r.createdAt).toLocaleString())}</div>
+                <span class="badge status-${esc(r.status)}">${esc(r.status)}</span>
+              </div>
+              <div style="margin:6px 0;"><strong>${esc(r.title)}:</strong> ${esc(r.details)}</div>
+              ${r.adminReply ? `<div class="muted">Reply: ${esc(r.adminReply)}</div>` : ''}
+              <div class="row" style="margin-top:8px;">
+                <button class="btn btn-blue btn-sm" onclick="updateReq('${esc(r.id)}','ACCEPTED')">Accept</button>
+                <button class="btn btn-sm" onclick="updateReq('${esc(r.id)}','COMPLETED')">Complete</button>
+                <button class="btn btn-outline btn-sm" onclick="updateReq('${esc(r.id)}','REJECTED')">Reject</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteReq('${esc(r.id)}')">Delete</button>
+              </div>
+            </div>
+          `).join('')
+          : '<p class="muted">No user requests yet.</p>';
+      }
+    }
+
+    function renderContentCard(c) {
+      const dept = state.departments.find(d => d.id === c.departmentId);
+      const isAdmin = state.user && state.user.role === 'ADMIN';
+      return `<div class="card" style="margin-top:10px;">
+        <div class="row space-between">
+          <div>
+            ${c.isAnnouncement ? '<span class="badge" style="background:#FEF3C7; color:#92400E;">ANNOUNCEMENT</span> ' : ''}
+            ${!c.isPublished ? '<span class="badge badge-draft">DRAFT</span> ' : ''}
+            <span class="badge">${esc(c.contentType)}</span>
+            ${c.category ? `<span class="badge" style="background:#F1F5F9; color:#334155;">${esc(c.category)}</span> ` : ''}
+            <span class="muted">${esc(dept ? dept.name : '')} • ${esc(new Date(c.publishedAt || c.createdAt).toLocaleDateString())}</span>
+          </div>
+          ${isAdmin ? `<div class="row">
+            <button class="btn btn-outline btn-sm" onclick="togglePublishContent('${esc(c.id)}', ${!c.isPublished})">${c.isPublished ? 'Unpublish' : 'Publish'}</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteContentItem('${esc(c.id)}')">Delete</button>
+          </div>` : ''}
+        </div>
+        <h4 style="margin:8px 0 4px;">${esc(c.title)}</h4>
+        <div class="muted">${esc(c.description || '')}</div>
+        ${c.contentBody ? `<p style="white-space:pre-wrap; font-size:14px;">${esc(c.contentBody)}</p>` : ''}
+        ${c.attachmentUrlOrPath ? `<button class="btn btn-outline btn-sm" onclick="downloadAttachment('${esc(c.attachmentUrlOrPath)}','${esc(c.attachmentName || 'file')}')">Download ${esc(c.attachmentName || 'Attachment')}</button>` : ''}
+      </div>`;
+    }
+
+    // Restore active login session across browser reloads cleanly via sessionStorage
+    window.addEventListener('DOMContentLoaded', () => {
+      try {
+        const raw = sessionStorage.getItem(SESSION_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed && parsed.token && parsed.user) {
+            onAuthenticated(parsed).catch(() => logout());
+          }
+        }
+      } catch (_) {}
+    });
+  </script>
+</body>
+</html>

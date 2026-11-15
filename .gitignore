@@ -18,3 +18,7 @@ local.properties
 debug.keystore
 SolarHub-v1.0.0.apk
 .build-outputs
+backend/node_modules
+backend/data
+backend/uploads
+backend/.env

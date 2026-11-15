@@ -1,7 +1,7 @@
 package com.example.solarhub.ui.components
 
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Article
+import androidx.compose.material.icons.automirrored.filled.Article
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.CalendarMonth
@@ -72,7 +72,7 @@ object IconHelper {
     return when (type) {
       ContentType.TEXT -> Icons.Default.Description
       ContentType.PDF -> Icons.Default.PictureAsPdf
-      ContentType.WORD -> Icons.Default.Article
+      ContentType.WORD -> Icons.AutoMirrored.Filled.Article
       ContentType.EXCEL -> Icons.Default.TableChart
       ContentType.PPT -> Icons.Default.CoPresent
       ContentType.IMAGE -> Icons.Default.Image
