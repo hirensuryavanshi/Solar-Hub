@@ -113,3 +113,12 @@ data class UserRequestEntity(
   val createdAt: Long,
   val updatedAt: Long
 )
+
+@Entity(tableName = "app_users")
+data class AppUserEntity(
+  @PrimaryKey val mobile: String,
+  val name: String,
+  val isBlocked: Boolean,
+  val createdAt: Long,
+  val lastLoginAt: Long
+)

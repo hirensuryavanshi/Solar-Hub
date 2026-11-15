@@ -86,4 +86,43 @@ interface SolarHubDao {
 
   @Query("DELETE FROM user_requests WHERE id = :id")
   suspend fun deleteRequest(id: String)
+
+  @Query("SELECT * FROM content_items WHERE id = :id LIMIT 1")
+  suspend fun getContentOnce(id: String): ContentItemEntity?
+
+  @Query("SELECT * FROM content_items WHERE isPublished = 1")
+  suspend fun getPublishedOnce(): List<ContentItemEntity>
+
+  @Query("SELECT * FROM user_requests WHERE id = :id LIMIT 1")
+  suspend fun getRequestOnce(id: String): UserRequestEntity?
+
+  @Insert(onConflict = OnConflictStrategy.REPLACE)
+  suspend fun insertRequests(requests: List<UserRequestEntity>)
+
+  @Query("DELETE FROM user_requests WHERE id NOT IN (:ids)")
+  suspend fun deleteRequestsNotIn(ids: List<String>)
+
+  @Insert(onConflict = OnConflictStrategy.REPLACE)
+  suspend fun insertUsers(users: List<AppUserEntity>)
+
+  @Query("DELETE FROM app_users WHERE mobile NOT IN (:mobiles)")
+  suspend fun deleteUsersNotIn(mobiles: List<String>)
+
+  @Query("SELECT * FROM app_users ORDER BY lastLoginAt DESC")
+  fun getAllUsers(): Flow<List<AppUserEntity>>
+
+  @Query("SELECT * FROM app_users WHERE mobile = :mobile LIMIT 1")
+  suspend fun getUser(mobile: String): AppUserEntity?
+
+  @Query("SELECT * FROM app_users WHERE mobile = :mobile LIMIT 1")
+  fun observeUser(mobile: String): Flow<AppUserEntity?>
+
+  @Insert(onConflict = OnConflictStrategy.REPLACE)
+  suspend fun upsertUser(user: AppUserEntity)
+
+  @Query("UPDATE app_users SET isBlocked = :blocked WHERE mobile = :mobile")
+  suspend fun setUserBlocked(mobile: String, blocked: Boolean)
+
+  @Query("DELETE FROM app_users WHERE mobile = :mobile")
+  suspend fun deleteUser(mobile: String)
 }

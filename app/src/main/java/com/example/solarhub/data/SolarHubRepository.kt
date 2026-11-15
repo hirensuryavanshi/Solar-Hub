@@ -152,11 +152,11 @@ class SolarHubRepository(private val dao: SolarHubDao) {
 
   val allRequests: Flow<List<UserRequestEntity>> = dao.getAllRequests()
 
-  suspend fun submitRequest(name: String, mobile: String, message: String) {
+  suspend fun submitRequest(name: String, mobile: String, message: String, id: String = UUID.randomUUID().toString()) {
     val now = System.currentTimeMillis()
     dao.insertRequest(
       UserRequestEntity(
-        id = UUID.randomUUID().toString(),
+        id = id,
         userName = name.trim(),
         userMobile = mobile.trim(),
         message = message.trim(),
@@ -174,5 +174,32 @@ class SolarHubRepository(private val dao: SolarHubDao) {
 
   suspend fun deleteRequest(id: String) {
     dao.deleteRequest(id)
+  }
+
+  val allUsers: Flow<List<AppUserEntity>> = dao.getAllUsers()
+
+  fun observeUser(mobile: String): Flow<AppUserEntity?> = dao.observeUser(mobile)
+
+  /** Saves the user who logged in. Returns true when this user is blocked by the admin. */
+  suspend fun registerLogin(name: String, mobile: String, forceBlocked: Boolean? = null): Boolean {
+    val now = System.currentTimeMillis()
+    val existing = dao.getUser(mobile)
+    val user = AppUserEntity(
+      mobile = mobile,
+      name = name.trim(),
+      isBlocked = forceBlocked ?: existing?.isBlocked ?: false,
+      createdAt = existing?.createdAt ?: now,
+      lastLoginAt = now
+    )
+    dao.upsertUser(user)
+    return user.isBlocked
+  }
+
+  suspend fun setUserBlocked(mobile: String, blocked: Boolean) {
+    dao.setUserBlocked(mobile, blocked)
+  }
+
+  suspend fun deleteUser(mobile: String) {
+    dao.deleteUser(mobile)
   }
 }

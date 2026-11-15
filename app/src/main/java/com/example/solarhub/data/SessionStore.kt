@@ -27,6 +27,13 @@ class SessionStore(context: Context) {
   }
 
   fun clear() {
-    prefs.edit().clear().apply()
+    prefs.edit().remove("name").remove("mobile").apply()
+  }
+
+  /** Time when this user last opened the notifications screen. */
+  fun loadSeenAt(): Long = prefs.getLong("notif_seen_at", 0L)
+
+  fun saveSeenAt(time: Long) {
+    prefs.edit().putLong("notif_seen_at", time).apply()
   }
 }

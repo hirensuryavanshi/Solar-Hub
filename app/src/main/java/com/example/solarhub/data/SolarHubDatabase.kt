@@ -11,8 +11,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @Database(
-  entities = [DepartmentEntity::class, ContentItemEntity::class, UserRequestEntity::class],
-  version = 2,
+  entities = [DepartmentEntity::class, ContentItemEntity::class, UserRequestEntity::class, AppUserEntity::class],
+  version = 3,
   exportSchema = false
 )
 abstract class SolarHubDatabase : RoomDatabase() {
@@ -58,6 +58,21 @@ abstract class SolarHubDatabase : RoomDatabase() {
       }
     }
 
+    // Adds the "app_users" table (login list for the admin) without touching existing data
+    private val MIGRATION_2_3 = object : Migration(2, 3) {
+      override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+          "CREATE TABLE IF NOT EXISTS `app_users` (" +
+            "`mobile` TEXT NOT NULL, " +
+            "`name` TEXT NOT NULL, " +
+            "`isBlocked` INTEGER NOT NULL, " +
+            "`createdAt` INTEGER NOT NULL, " +
+            "`lastLoginAt` INTEGER NOT NULL, " +
+            "PRIMARY KEY(`mobile`))"
+        )
+      }
+    }
+
     fun getDatabase(context: Context): SolarHubDatabase {
       return INSTANCE ?: synchronized(this) {
         val instance = Room.databaseBuilder(
@@ -65,7 +80,7 @@ abstract class SolarHubDatabase : RoomDatabase() {
           SolarHubDatabase::class.java,
           "solar_hub_database"
         )
-        .addMigrations(MIGRATION_1_2)
+        .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
         .addCallback(object : Callback() {
           override fun onCreate(db: SupportSQLiteDatabase) {
             super.onCreate(db)
